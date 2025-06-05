@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema da Gráfica</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>📘 Menu</h2>
+      <button onclick="carregarPagina('clientes/clientes.html')">Cadastro de Clientes</button>
+      <button onclick="carregarPagina('ordemServiço/ordem_servico.html')">Nova OS</button>
+      <button onclick="carregarPagina('ordemServiço/ordens_listagem.html')">Ver OS</button>
+    </aside>
+
+    <main class="conteudo" id="conteudo">
+      <!-- Aqui carregamos as telas -->
+    </main>
+  </div>
+
+  <script>
+    async function carregarPagina(pagina) {
+    const resposta = await fetch(pagina);
+    const html = await resposta.text();
+    const conteudo = document.getElementById('conteudo');
+
+    conteudo.innerHTML = html;
+
+    // Procura o script associado à página
+    const nomeScript = pagina.replace('.html', '.js');
+
+    // Carrega o JS manualmente
+    const script = document.createElement('script');
+    script.src = nomeScript;
+    script.type = 'text/javascript';
+    script.defer = true;
+    document.body.appendChild(script);
+  }
+
+  carregarPagina('clientes/clientes.html');
+  </script>
+</body>
+</html>
