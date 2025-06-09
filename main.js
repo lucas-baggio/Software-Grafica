@@ -1,8 +1,18 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-require('electron-reload')(__dirname, {
-  electron: require(`${__dirname}/node_modules/electron`)
-});
+
+// require('electron-reload')(__dirname, {
+//   electron: require(`${__dirname}/node_modules/electron`),
+//   // adiciona suporte para recarregar HTML/JS/CSS da pasta public
+//   watch: [
+//     path.join(__dirname, 'public'),
+//     path.join(__dirname, 'db'),
+//     path.join(__dirname, 'preload.js')
+//   ],
+//   hardReset: true,
+//   hardResetMethod: 'exit'
+// });
+
 const db = require('./db/db');
 
 function createWindow () {
@@ -15,7 +25,7 @@ function createWindow () {
     nodeIntegration: false
   }
 });
-
+  win.maximize(); 
   win.loadFile('public/layout.html');
 }
 

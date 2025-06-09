@@ -1,10 +1,11 @@
+console.log("Ordem de Serviço JS carregado");
 
 const formOS = document.getElementById('formOS');
 const clienteSelect = document.getElementById('clienteSelect');
 const itensContainer = document.getElementById('itensContainer');
 
 // Preenche a lista de clientes
-ipcRenderer.invoke('buscar-clientes').then(clientes => {
+window.api.buscarClientes().then(clientes => {
   clientes.forEach(cliente => {
     const option = document.createElement('option');
     option.value = cliente.id;
@@ -16,13 +17,20 @@ ipcRenderer.invoke('buscar-clientes').then(clientes => {
 // Adiciona item à OS
 function adicionarItem() {
   const div = document.createElement('div');
-  div.className = 'item';
+  div.className = 'item row';
   div.innerHTML = `
-    <input type="number" placeholder="Quantidade" class="quantidade" required>
-    <input type="text" placeholder="Descrição" class="descricao" required>
-    <input type="number" step="0.01" placeholder="Valor Unitário" class="valor_unitario" required>
-    <button type="button" onclick="this.parentNode.remove()">Remover</button>
-    <br><br>
+    <div class="col-2">
+      <input type="number" placeholder="Quantidade" class="quantidade" required>
+    </div>
+    <div class="col-6">
+      <input type="text" placeholder="Descrição" class="descricao" required>
+    </div>
+    <div class="col-3">
+      <input type="number" step="0.01" placeholder="Valor Unitário" class="valor_unitario" required>
+    </div>
+    <div class="col-1" style="display:flex;align-items:center;">
+      <button type="button" onclick="this.closest('.item').remove()">🗑️</button>
+    </div>
   `;
   itensContainer.appendChild(div);
 }
@@ -48,21 +56,29 @@ formOS.addEventListener('submit', (e) => {
   os.numeracao = formOS.numeracao.checked ? 1 : 0;
   os.vias = getViasSelecionadas();
 
-  // Trata os itens
   const itens = Array.from(itensContainer.querySelectorAll('.item')).map(item => ({
     quantidade: parseInt(item.querySelector('.quantidade').value),
     descricao: item.querySelector('.descricao').value,
     valor_unitario: parseFloat(item.querySelector('.valor_unitario').value)
   }));
 
-  // Envia para o backend
-  ipcRenderer.invoke('salvar-os', { os, itens }).then(res => {
+  window.api.salvarOS({ os, itens }).then(res => {
     if (res.ok) {
-      alert('✅ Ordem de Serviço salva com sucesso!');
+      Swal.fire({
+        title: 'Sucesso!',
+        text: 'Ordem de Serviço salva com sucesso!',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
       formOS.reset();
       itensContainer.innerHTML = '';
     } else {
-      alert('❌ Erro ao salvar a Ordem de Serviço!');
+      Swal.fire({
+        title: 'Erro!',
+        text: 'Não foi possível salvar a Ordem de Serviço.',
+        icon: 'error'
+      });
     }
   });
 });

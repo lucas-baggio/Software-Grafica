@@ -1,8 +1,18 @@
+/*Bases*/
 body, html {
   margin: 0;
   padding: 0;
   height: 100%;
   font-family: sans-serif;
+  background-color: #f9f9f9;
+}
+
+h1 {
+  color: #222;
+}
+
+input {
+  border: 1px solid #ccc;
 }
 
 * {
@@ -11,10 +21,50 @@ body, html {
   box-sizing: border-box;
 }
 
+/*Varíaveis*/
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -0.5rem;
+}
+
+[class*="col-"] {
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.col-1  { width: 8.33%; }
+.col-2  { width: 16.66%; }
+.col-3  { width: 25%; }
+.col-4  { width: 33.33%; }
+.col-5  { width: 41.66%; }
+.col-6  { width: 50%; }
+.col-7  { width: 58.33%; }
+.col-8  { width: 66.66%; }
+.col-9  { width: 75%; }
+.col-10 { width: 83.33%; }
+.col-11 { width: 91.66%; }
+.col-12 { width: 100%; }
+
 .container {
   display: flex;
   height: 100vh;
 }
+
+.success {
+  background: #28a745;
+  color: white;
+  cursor: pointer;
+}
+
+.error {
+  background: #6c757d;
+  color: white;
+  cursor: pointer;
+}
+
+/*Layout*/
 
 .sidebar {
   width: 220px;
@@ -53,4 +103,67 @@ iframe {
   width: 100%;
   height: 100%;
   border: none;
+}
+
+/* Clientes */
+
+.cadastro-clientes {
+  width: 100%;
+  height: 100vh;
+  padding: 40px 5%;
+}
+
+.cadastro-clientes h1 {
+  text-align: center;
+}
+
+#formCliente {
+  margin-top: 40px;
+}
+
+#formCliente input{
+  /* border: 1px solid black; */
+  width: 100%;
+  height: 50px;
+  padding: 0 10px;
+  border-radius: 4px;
+}
+
+#formCliente button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 4px;
+}
+
+#formCliente label {
+  display: block;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.3rem;
+}
+
+/*Cadastro Ordem de Serviço*/
+
+.cadastro-ordem input[type="date"], .cadastro-ordem select{
+  width: 100%;
+  height: 50px;
+  padding: 0 10px;
+  border-radius: 4px;
+}
+
+.cadastro-ordem .row {
+  align-items: center;
+}
+
+.cadastro-ordem label {
+  display: block;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.3rem;
+}
+
+.cadastro-ordem {
+  width: 100%;
+  height: 100vh;
+  padding: 40px 5%;
 }
