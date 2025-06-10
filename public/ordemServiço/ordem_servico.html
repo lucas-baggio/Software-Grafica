@@ -1,155 +1,258 @@
-<div class="cadastro-ordem">
-  <h1>Nova Ordem de Serviço</h1>
+<div>
+  
+    <div class="container">
+        <div class="cadastro-ordem">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Nova Ordem de Serviço</h1>
+                <small class="text-muted">Campos marcados com <span class="required">*</span> são obrigatórios</small>
+            </div>
 
-  <form id="formOS" class="row">
+            <form id="formOS" class="needs-validation" novalidate>
+                
+                <!-- SEÇÃO CLIENTE -->
+                <fieldset class="form-section">
+                    <legend>Informações do Cliente</legend>
+                    <div class="row">
+                        <div class="col-12">
+                            <label for="clienteSelect" class="form-label">
+                                Cliente: <span class="required">*</span>
+                            </label>
+                            <select name="cliente_id" id="clienteSelect" class="form-select" required>
+                                <option value="">Selecione um cliente...</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor, selecione um cliente.
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
 
-    <!-- CLIENTE -->
-    <div class="col-12">
-      <label for="clienteSelect">Cliente:</label>
-      <select name="cliente_id" id="clienteSelect" required></select>
-    </div>
+                <!-- SEÇÃO DATAS -->
+                <fieldset class="form-section">
+                    <legend>Prazos e Configurações</legend>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="data_entrada" class="form-label">
+                                Data Entrada: <span class="required">*</span>
+                            </label>
+                            <input type="date" name="data_entrada" id="data_entrada" class="form-control" required>
+                            <div class="invalid-feedback">
+                                Data de entrada é obrigatória.
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="data_entrega" class="form-label">Data Entrega:</label>
+                            <input type="date" name="data_entrega" id="data_entrega" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="prova" class="form-label">Prova:</label>
+                            <select name="prova" id="prova" class="form-select">
+                                <option value="">---</option>
+                                <option value="Sim">Sim</option>
+                                <option value="Não">Não</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="alteracao" class="form-label">Alteração:</label>
+                            <select name="alteracao" id="alteracao" class="form-select">
+                                <option value="">---</option>
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cores" class="form-label">Cores:</label>
+                            <select name="cores" id="cores" class="form-select">
+                                <option value="">---</option>
+                                <option value="1 cor">1 cor</option>
+                                <option value="2 cores">2 cores</option>
+                                <option value="3 cores">3 cores</option>
+                                <option value="cromia">Cromia</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
 
-    <!-- DATAS -->
-    <div class="col-4">
-      <label for="data_entrada">Data Entrada:</label>
-      <input type="date" name="data_entrada" required>
-    </div>
-    <div class="col-4">
-      <label for="data_entrega">Data Entrega:</label>
-      <input type="date" name="data_entrega">
-    </div>
-    <div class="col-4">
-      <label>Prova e Alteração:</label><br>
-      <div class="row">
-        <label><input type="checkbox" name="alteracao"> Alteração</label>
-        <label><input type="checkbox" name="mostrar_prova"> Mostrar Prova</label>
-      </div>
-    </div>
+                <!-- SEÇÃO PAPÉIS -->
+                <fieldset class="form-section">
+                    <legend>Especificações de Papel</legend>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="sulfite" class="form-label">Papel Sulfite:</label>
+                            <select name="sulfite" id="sulfite" class="form-select">
+                                <option value="">---</option>
+                                <option value="56">56g</option>
+                                <option value="70">70g</option>
+                                <option value="75">75g</option>
+                                <option value="90">90g</option>
+                                <option value="120">120g</option>
+                                <option value="180">180g</option>
+                                <option value="240">240g</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="duplex" class="form-label">Duplex:</label>
+                            <select name="duplex" id="duplex" class="form-select">
+                                <option value="">---</option>
+                                <option value="180">180g</option>
+                                <option value="220">220g</option>
+                                <option value="276">276g</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="couche" class="form-label">Couche:</label>
+                            <select name="couche" id="couche" class="form-select">
+                                <option value="">---</option>
+                                <option value="90">90g</option>
+                                <option value="115">115g</option>
+                                <option value="150">150g</option>
+                                <option value="250">250g</option>
+                                <option value="300">300g</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="bond" class="form-label">Bond:</label>
+                            <select name="bond" id="bond" class="form-select">
+                                <option value="">---</option>
+                                <option value="50">50g</option>
+                                <option value="75">75g</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input type="checkbox" name="copiativo" id="copiativo" class="form-check-input">
+                                <label for="copiativo" class="form-check-label">Copiativo</label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
 
-    <!-- CORES -->
-    <div class="col-4">
-      <label for="cores">Cores:</label>
-      <select name="cores">
-        <option value="1 cor">1 cor</option>
-        <option value="2 cores">2 cores</option>
-        <option value="3 cores">3 cores</option>
-        <option value="cromia">Cromia</option>
-      </select>
-    </div>
+                <!-- SEÇÃO VIAS E FORMATO -->
+                <fieldset class="form-section">
+                    <legend>Vias e Formato</legend>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label class="form-label">Vias:</label>
+                            <div class="checkbox-group">
+                                <label class="form-check-label">
+                                    <input type="checkbox" name="vias" value="Amarela" id="via_amarela" class="form-check-input">
+                                    <span>Amarela</span>
+                                </label>
+                                <label class="form-check-label">
+                                    <input type="checkbox" name="vias" value="Azul" id="via_azul" class="form-check-input">
+                                    <span>Azul</span>
+                                </label>
+                                <label class="form-check-label">
+                                    <input type="checkbox" name="vias" value="Rosa" id="via_rosa" class="form-check-input">
+                                    <span>Rosa</span>
+                                </label>
+                                <label class="form-check-label">
+                                    <input type="checkbox" name="vias" value="Verde" id="via_verde" class="form-check-input">
+                                    <span>Verde</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="formato" class="form-label">Formato:</label>
+                            <select name="formato" id="formato" class="form-select">
+                                <option value="">---</option>
+                                <option value="64">64</option>
+                                <option value="32">32</option>
+                                <option value="24">24</option>
+                                <option value="16">16</option>
+                                <option value="12">12</option>
+                                <option value="10">10</option>
+                                <option value="09">09</option>
+                                <option value="04">04</option>
+                                <option value="02">02</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
 
-    <!-- PAPÉIS -->
-    <div class="col-3">
-      <label>Papel Sulfite:</label>
-      <select name="sulfite">
-        <option value="">---</option>
-        <option value="56">56</option>
-        <option value="70">70</option>
-        <option value="75">75</option>
-        <option value="90">90</option>
-        <option value="120">120</option>
-        <option value="180">180</option>
-        <option value="240">240</option>
-      </select>
-    </div>
+                <!-- SEÇÃO ACABAMENTOS -->
+                <fieldset class="form-section">
+                    <legend>Acabamentos</legend>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="picotar" class="form-label">Picotar:</label>
+                            <select name="picotar" id="picotar" class="form-select">
+                                <option value="">---</option>
+                                <option value="01">01</option>
+                                <option value="02">02</option>
+                                <option value="03">03</option>
+                                <option value="04">04</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4">
+                                <input type="checkbox" name="so_colado" id="so_colado" class="form-check-input">
+                                <label for="so_colado" class="form-check-label">Só Colado</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4">
+                                <input type="checkbox" name="numeracao" id="numeracao" class="form-check-input">
+                                <label for="numeracao" class="form-check-label">Numeração</label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
 
-    <div class="col-3">
-      <label>Duplex:</label>
-      <select name="duplex">
-        <option value="">---</option>
-        <option value="180">180</option>
-        <option value="220">220</option>
-        <option value="276">276</option>
-      </select>
-    </div>
+                <!-- SEÇÃO PAGAMENTO -->
+                <fieldset class="form-section">
+                    <legend>Condições de Pagamento</legend>
+                    <div class="row">
+                        <div class="col-12">
+                            <label for="condicoes_pagamento" class="form-label">Condições de Pagamento:</label>
+                            <input type="text" name="condicoes_pagamento" id="condicoes_pagamento" class="form-control" 
+                                   placeholder="Ex: À vista, 30 dias, etc.">
+                        </div>
+                    </div>
+                </fieldset>
 
-    <div class="col-3">
-      <label>Couche:</label>
-      <select name="couche">
-        <option value="">---</option>
-        <option value="90">90</option>
-        <option value="115">115</option>
-        <option value="150">150</option>
-        <option value="250">250</option>
-        <option value="300">300</option>
-      </select>
-    </div>
+                <!-- SEÇÃO ITENS -->
+                <fieldset class="form-section">
+                    <legend>Itens da Ordem de Serviço</legend>
+                    <div id="itensContainer">
+                        <!-- Itens serão adicionados dinamicamente aqui -->
+                    </div>
+                    <button type="button" class="btn btn-add-item btn-success" onclick="adicionarItem()">
+                        <i class="bi bi-plus-circle"></i> Adicionar Item
+                    </button>
+                </fieldset>
 
-    <div class="col-3">
-      <label>Bond:</label>
-      <select name="bond">
-        <option value="">---</option>
-        <option value="50">50</option>
-        <option value="75">75</option>
-      </select>
-    </div>
-
-    <div class="col-3">
-      <label><input type="checkbox" name="copiativo"> Copiativo</label>
-    </div>
-
-    <!-- VIAS -->
-    <div class="col-6">
-      <label>Vias:</label><br>
-      <label><input type="checkbox" name="vias" value="Amarela"> Amarela</label>
-      <label><input type="checkbox" name="vias" value="Azul"> Azul</label>
-      <label><input type="checkbox" name="vias" value="Rosa"> Rosa</label>
-      <label><input type="checkbox" name="vias" value="Verde"> Verde</label>
-    </div>
-
-    <!-- FORMATO -->
-    <div class="col-3">
-      <label for="formato">Formato:</label>
-      <select name="formato">
-        <option value="64">64</option>
-        <option value="32">32</option>
-        <option value="24">24</option>
-        <option value="16">16</option>
-        <option value="12">12</option>
-        <option value="10">10</option>
-        <option value="09">09</option>
-        <option value="04">04</option>
-        <option value="02">02</option>
-      </select>
-    </div>
-
-    <!-- ACABAMENTO -->
-    <div class="col-12">
-      <label>Acabamentos:</label><br>
-      <label>Picotar:</label>
-      <div class="row">
-        <div class="col-6">
-          <select name="picotar" class="col-6">
-            <option value="">---</option>
-            <option value="01">01</option>
-            <option value="02">02</option>
-            <option value="03">03</option>
-            <option value="04">04</option>
-          </select>
+                <!-- BOTÕES DE AÇÃO -->
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="button" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Salvar OS
+                    </button>
+                </div>
+            </form>
         </div>
-        <label><input type="checkbox" name="so_colado"> Só Colado</label>
-        <label><input type="checkbox" name="numeracao"> Numeração</label>
-      </div>
-
     </div>
 
-    <!-- PAGAMENTO -->
-    <div class="col-12">
-      <label>Condições de Pagamento:</label>
-      <input type="text" name="condicoes_pagamento">
-    </div>
-
-    <!-- ITENS -->
-    <div class="col-12">
-      <h3>Itens</h3>
-      <div id="itensContainer"></div>
-      <button type="button" onclick="adicionarItem()">Adicionar Item</button>
-    </div>
-
-    <div class="col-12" style="text-align: right;">
-      <button type="submit">Salvar OS</button>
-    </div>
-  </form>
-
-  <script src="ordemServico/ordem_servico.js"></script>
+    <script>
+        // Validação em tempo real
+        document.querySelectorAll('.form-control, .form-select').forEach(function(element) {
+            element.addEventListener('blur', function() {
+                if (this.checkValidity()) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            });
+        });
+    </script>
+    <script src="ordem_servico.js"></script>
 
 </div>
