@@ -2,7 +2,7 @@
   
     <div class="container">
         <div class="cadastro-ordem">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="">
                 <h1 class="h2">Nova Ordem de Serviço</h1>
                 <small class="text-muted">Campos marcados com <span class="required">*</span> são obrigatórios</small>
             </div>
@@ -20,9 +20,7 @@
                             <select name="cliente_id" id="clienteSelect" class="form-select" required>
                                 <option value="">Selecione um cliente...</option>
                             </select>
-                            <div class="invalid-feedback">
-                                Por favor, selecione um cliente.
-                            </div>
+                            
                         </div>
                     </div>
                 </fieldset>
@@ -31,20 +29,18 @@
                 <fieldset class="form-section">
                     <legend>Prazos e Configurações</legend>
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <label for="data_entrada" class="form-label">
                                 Data Entrada: <span class="required">*</span>
                             </label>
                             <input type="date" name="data_entrada" id="data_entrada" class="form-control" required>
-                            <div class="invalid-feedback">
-                                Data de entrada é obrigatória.
-                            </div>
+                            
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <label for="data_entrega" class="form-label">Data Entrega:</label>
                             <input type="date" name="data_entrega" id="data_entrega" class="form-control">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <label for="prova" class="form-label">Prova:</label>
                             <select name="prova" id="prova" class="form-select">
                                 <option value="">---</option>
@@ -55,7 +51,7 @@
                     </div>
                     
                     <div class="row mt-3">
-                        <div class="col-md-6">
+                        <div class="col-6">
                             <label for="alteracao" class="form-label">Alteração:</label>
                             <select name="alteracao" id="alteracao" class="form-select">
                                 <option value="">---</option>
@@ -63,7 +59,7 @@
                                 <option value="nao">Não</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-6">
                             <label for="cores" class="form-label">Cores:</label>
                             <select name="cores" id="cores" class="form-select">
                                 <option value="">---</option>
@@ -80,7 +76,7 @@
                 <fieldset class="form-section">
                     <legend>Especificações de Papel</legend>
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-3">
                             <label for="sulfite" class="form-label">Papel Sulfite:</label>
                             <select name="sulfite" id="sulfite" class="form-select">
                                 <option value="">---</option>
@@ -93,7 +89,7 @@
                                 <option value="240">240g</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-3">
                             <label for="duplex" class="form-label">Duplex:</label>
                             <select name="duplex" id="duplex" class="form-select">
                                 <option value="">---</option>
@@ -102,7 +98,7 @@
                                 <option value="276">276g</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-3">
                             <label for="couche" class="form-label">Couche:</label>
                             <select name="couche" id="couche" class="form-select">
                                 <option value="">---</option>
@@ -113,7 +109,7 @@
                                 <option value="300">300g</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-3">
                             <label for="bond" class="form-label">Bond:</label>
                             <select name="bond" id="bond" class="form-select">
                                 <option value="">---</option>
@@ -124,7 +120,7 @@
                     </div>
                     
                     <div class="row mt-3">
-                        <div class="col-md-6">
+                        <div class="col-6">
                             <div class="form-check">
                                 <input type="checkbox" name="copiativo" id="copiativo" class="form-check-input">
                                 <label for="copiativo" class="form-check-label">Copiativo</label>
@@ -137,7 +133,7 @@
                 <fieldset class="form-section">
                     <legend>Vias e Formato</legend>
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-8">
                             <label class="form-label">Vias:</label>
                             <div class="checkbox-group">
                                 <label class="form-check-label">
@@ -158,7 +154,7 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <label for="formato" class="form-label">Formato:</label>
                             <select name="formato" id="formato" class="form-select">
                                 <option value="">---</option>
@@ -180,7 +176,7 @@
                 <fieldset class="form-section">
                     <legend>Acabamentos</legend>
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <label for="picotar" class="form-label">Picotar:</label>
                             <select name="picotar" id="picotar" class="form-select">
                                 <option value="">---</option>
@@ -190,13 +186,13 @@
                                 <option value="04">04</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <div class="form-check mt-4">
                                 <input type="checkbox" name="so_colado" id="so_colado" class="form-check-input">
                                 <label for="so_colado" class="form-check-label">Só Colado</label>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-4">
                             <div class="form-check mt-4">
                                 <input type="checkbox" name="numeracao" id="numeracao" class="form-check-input">
                                 <label for="numeracao" class="form-check-label">Numeração</label>
@@ -229,30 +225,16 @@
                 </fieldset>
 
                 <!-- BOTÕES DE AÇÃO -->
-                <div class="d-flex justify-content-end gap-2 mt-4">
-                    <button type="button" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save"></i> Salvar OS
+                <div class="">
+                    <button type="button" class="error">Cancelar</button>
+                    <button type="submit" class="success">
+                         Salvar OS
                     </button>
                 </div>
             </form>
         </div>
     </div>
-
-    <script>
-        // Validação em tempo real
-        document.querySelectorAll('.form-control, .form-select').forEach(function(element) {
-            element.addEventListener('blur', function() {
-                if (this.checkValidity()) {
-                    this.classList.remove('is-invalid');
-                    this.classList.add('is-valid');
-                } else {
-                    this.classList.remove('is-valid');
-                    this.classList.add('is-invalid');
-                }
-            });
-        });
-    </script>
+    
     <script src="ordem_servico.js"></script>
 
 </div>
