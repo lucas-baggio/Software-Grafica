@@ -108,7 +108,7 @@ select {
 /*Layout*/
 
 .sidebar {
-  width: 220px;
+  width: 24%;
   background: #222;
   color: white;
   padding: 20px;
@@ -187,15 +187,29 @@ button {
 
 .cadastro-ordem input[type="date"],
 .cadastro-ordem select,
-.cadastro-ordem input[type="text"] {
+.cadastro-ordem input[type="text"], 
+.cadastro-ordem input[type="number"] {
   width: 100%;
   height: 50px;
   padding: 0 10px;
   border-radius: 4px;
 }
 
+.cadastro-ordem input[type="checkbox"] {
+  transform: scale(2);
+  margin: 5px;
+}
 
 .cadastro-ordem .row {
+  align-items: center;
+}
+
+.check label {
+  margin-left: 5px;
+}
+
+.check {
+  display: flex;
   align-items: center;
 }
 
@@ -285,6 +299,7 @@ input[type=checkbox] {
 .btn-add-item {
   background: #28a745;
   border-color: #28a745;
+  color: white;
 }
 
 .btn-add-item:hover {
