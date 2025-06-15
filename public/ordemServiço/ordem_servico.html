@@ -1,5 +1,5 @@
 <div>
-  
+
     <div class="container">
         <div class="cadastro-ordem">
             <div class="">
@@ -8,7 +8,7 @@
             </div>
 
             <form id="formOS" class="needs-validation" novalidate>
-                
+
                 <!-- SEÇÃO CLIENTE -->
                 <fieldset class="form-section">
                     <legend>Informações do Cliente</legend>
@@ -17,10 +17,11 @@
                             <label for="clienteSelect" class="form-label">
                                 Cliente: <span class="required">*</span>
                             </label>
-                            <select name="cliente_id" id="clienteSelect" class="form-select" required>
+                            <select id="clienteSelect" name="cliente_id" required
+                                placeholder="Selecione ou digite um cliente...">
                                 <option value="">Selecione um cliente...</option>
                             </select>
-                            
+
                         </div>
                     </div>
                 </fieldset>
@@ -34,7 +35,7 @@
                                 Data Entrada: <span class="required">*</span>
                             </label>
                             <input type="date" name="data_entrada" id="data_entrada" class="form-control" required>
-                            
+
                         </div>
                         <div class="col-4">
                             <label for="data_entrega" class="form-label">Data Entrega:</label>
@@ -49,7 +50,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="row mt-3">
                         <div class="col-6">
                             <label for="alteracao" class="form-label">Alteração:</label>
@@ -118,7 +119,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="row mt-3">
                         <div class="col-6">
                             <div class="form-check check">
@@ -137,19 +138,23 @@
                             <label class="form-label">Vias:</label>
                             <div class="checkbox-group">
                                 <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Amarela" id="via_amarela" class="form-check-input">
+                                    <input type="checkbox" name="vias" value="Amarela" id="via_amarela"
+                                        class="form-check-input">
                                     <span>Amarela</span>
                                 </label>
                                 <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Azul" id="via_azul" class="form-check-input">
+                                    <input type="checkbox" name="vias" value="Azul" id="via_azul"
+                                        class="form-check-input">
                                     <span>Azul</span>
                                 </label>
                                 <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Rosa" id="via_rosa" class="form-check-input">
+                                    <input type="checkbox" name="vias" value="Rosa" id="via_rosa"
+                                        class="form-check-input">
                                     <span>Rosa</span>
                                 </label>
                                 <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Verde" id="via_verde" class="form-check-input">
+                                    <input type="checkbox" name="vias" value="Verde" id="via_verde"
+                                        class="form-check-input">
                                     <span>Verde</span>
                                 </label>
                             </div>
@@ -207,8 +212,8 @@
                     <div class="row">
                         <div class="col-12">
                             <label for="condicoes_pagamento" class="form-label">Condições de Pagamento:</label>
-                            <input type="text" name="condicoes_pagamento" id="condicoes_pagamento" class="form-control" 
-                                   placeholder="Ex: À vista, 30 dias, etc.">
+                            <input type="text" name="condicoes_pagamento" id="condicoes_pagamento" class="form-control"
+                                placeholder="Ex: À vista, 30 dias, etc.">
                         </div>
                     </div>
                 </fieldset>
@@ -228,13 +233,13 @@
                 <div class="col-12">
                     <button type="button" class="error">Cancelar</button>
                     <button type="submit" class="success">
-                         Salvar OS
+                        Salvar OS
                     </button>
                 </div>
             </form>
         </div>
     </div>
-    
-    <script src="ordem_servico.js"></script>
+
+    <!-- <script src="ordem_servico.js"></script> -->
 
 </div>

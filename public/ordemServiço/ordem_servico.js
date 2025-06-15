@@ -1,4 +1,7 @@
-console.log("Ordem de Serviço JS carregado");
+
+
+(() => {
+  console.log("Ordem de Serviço JS carregado");
 
 const formOS = document.getElementById('formOS');
 const clienteSelect = document.getElementById('clienteSelect');
@@ -49,8 +52,8 @@ formOS.addEventListener('submit', (e) => {
   const formData = new FormData(formOS);
   const os = Object.fromEntries(formData.entries());
 
-  os.alteracao = formOS.alteracao.checked ? 1 : 0;
-  os.mostrar_prova = formOS.mostrar_prova.checked ? 1 : 0;
+  os.alteracao = formOS.alteracao.value;
+  os.prova = formOS.prova.value;
   os.copiativo = formOS.copiativo.checked ? 1 : 0;
   os.so_colado = formOS.so_colado.checked ? 1 : 0;
   os.numeracao = formOS.numeracao.checked ? 1 : 0;
@@ -83,3 +86,24 @@ formOS.addEventListener('submit', (e) => {
   });
 });
 
+const select = document.getElementById('clienteSelect');
+
+  window.api.buscarClientes().then(clientes => {
+    clientes.forEach(cliente => {
+      const option = document.createElement('option');
+      option.value = cliente.id;
+      option.textContent = cliente.nome_fantasia;
+      select.appendChild(option);
+    });
+
+    new TomSelect('#clienteSelect', {
+      create: false,
+      sortField: {
+        field: "text",
+        direction: "asc"
+      },
+      placeholder: "Digite para buscar um cliente"
+    });
+  });
+
+})();

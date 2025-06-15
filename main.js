@@ -112,18 +112,25 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
 ipcMain.handle('listar-os', async () => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT os.id, os.data_entrada, os.data_entrega,
-             c.nome_fantasia AS cliente,
-             IFNULL(SUM(io.valor_total), 0) AS total
+      SELECT 
+        os.id, 
+        os.data_entrada, 
+        os.data_entrega, 
+        c.nome_fantasia AS cliente,
+        COALESCE(SUM(io.valor_total), 0) AS total
       FROM ordens_servico os
       JOIN clientes c ON c.id = os.cliente_id
       LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
-      GROUP BY os.id
+      GROUP BY 
+        os.id, 
+        os.data_entrada, 
+        os.data_entrega, 
+        c.nome_fantasia
       ORDER BY os.id DESC
     `;
     db.all(query, (err, rows) => {
       if (err) {
-        console.error(err);
+        console.error("Erro ao listar OS:", err);
         resolve([]);
       } else {
         resolve(rows);
@@ -131,6 +138,7 @@ ipcMain.handle('listar-os', async () => {
     });
   });
 });
+
 
 ipcMain.handle('excluir-os', async (_, id) => {
   return new Promise((resolve) => {

@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <title>Sistema da Gráfica</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+
 </head>
+
 <body>
   <div class="container">
     <aside class="sidebar">
@@ -22,24 +29,37 @@
 
   <script>
     async function carregarPagina(pagina) {
-    const resposta = await fetch(pagina);
-    const html = await resposta.text();
-    const conteudo = document.getElementById('conteudo');
+      const resposta = await fetch(pagina);
+      const html = await resposta.text();
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = html;
 
-    conteudo.innerHTML = html;
+      // Remove CSS antigo
+      const oldStyle = document.getElementById('styleTela');
+      if (oldStyle) oldStyle.remove();
 
-    // Procura o script associado à página
-    const nomeScript = pagina.replace('.html', '.js');
+      // const cssPath = pagina.replace('.html');
+      // const link = document.createElement('link');
+      // link.id = 'styleTela';
+      // link.rel = 'stylesheet';
+      // link.href = cssPath + '?v=' + new Date().getTime();
+      // document.head.appendChild(link);
 
-    // Carrega o JS manualmente
-    const script = document.createElement('script');
-    script.src = nomeScript;
-    script.type = 'text/javascript';
-    script.defer = true;
-    document.body.appendChild(script);
-  }
+      const existingScript = document.getElementById('scriptTela');
+      if (existingScript) existingScript.remove();
 
-  carregarPagina('ordemServiço/ordem_servico.html');
+      // Adiciona script JS novo
+      const scriptPath = pagina.replace('.html', '.js');
+      const script = document.createElement('script');
+      script.src = scriptPath + '?v=' + new Date().getTime();
+      script.type = 'text/javascript';
+      script.defer = true;
+      script.id = 'scriptTela';
+      document.body.appendChild(script);
+    }
+
+    carregarPagina('./ordemServiço/ordens_listagem.html')
   </script>
 </body>
+
 </html>
