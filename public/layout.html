@@ -8,6 +8,10 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://unpkg.com/imask"></script>
+
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 
@@ -16,14 +20,15 @@
 <body>
   <div class="container">
     <aside class="sidebar">
-      <h2>📘 Menu</h2>
+      <h2>Funcionalidades</h2>
       <button onclick="carregarPagina('clientes/clientes.html')">Cadastro de Clientes</button>
+      <button onclick="carregarPagina('clientes/clientes_listagem.html')">Ver Clientes</button>
       <button onclick="carregarPagina('ordemServiço/ordem_servico.html')">Nova OS</button>
       <button onclick="carregarPagina('ordemServiço/ordens_listagem.html')">Ver OS</button>
+      <button onclick="carregarPagina('caixaDeEntrada/caixa.html')">Caixa de Entrada</button>
     </aside>
 
     <main class="conteudo" id="conteudo">
-      <!-- Aqui carregamos as telas -->
     </main>
   </div>
 
@@ -34,21 +39,12 @@
       const conteudo = document.getElementById('conteudo');
       conteudo.innerHTML = html;
 
-      // Remove CSS antigo
       const oldStyle = document.getElementById('styleTela');
       if (oldStyle) oldStyle.remove();
-
-      // const cssPath = pagina.replace('.html');
-      // const link = document.createElement('link');
-      // link.id = 'styleTela';
-      // link.rel = 'stylesheet';
-      // link.href = cssPath + '?v=' + new Date().getTime();
-      // document.head.appendChild(link);
 
       const existingScript = document.getElementById('scriptTela');
       if (existingScript) existingScript.remove();
 
-      // Adiciona script JS novo
       const scriptPath = pagina.replace('.html', '.js');
       const script = document.createElement('script');
       script.src = scriptPath + '?v=' + new Date().getTime();
@@ -57,8 +53,16 @@
       script.id = 'scriptTela';
       document.body.appendChild(script);
     }
+    window.carregarPagina = carregarPagina;
 
-    carregarPagina('./ordemServiço/ordens_listagem.html')
+    if (!window.api) {
+      setTimeout(() => {
+        carregarPagina('./ordemServiço/ordens_listagem.html')
+
+      }, 100); 
+    } else {
+      carregarPagina('./ordemServiço/ordens_listagem.html')
+    }
   </script>
 </body>
 

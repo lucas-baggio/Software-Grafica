@@ -1,12 +1,21 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, 'grafica.db');
-const db = new sqlite3.Database(dbPath);
+const isDev = process.env.NODE_ENV === 'development';
 
-// Criação das tabelas
+const dbPath = isDev
+  ? path.join(__dirname, '..', 'grafica.db') 
+  : path.join(process.resourcesPath, 'grafica.db');
+
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Erro ao abrir o banco de dados:', err.message);
+  } else {
+    console.log('Banco de dados conectado com sucesso.');
+  }
+});
+
 db.serialize(() => {
-  // Clientes
   db.run(`CREATE TABLE IF NOT EXISTS clientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome_fantasia TEXT,
@@ -20,7 +29,6 @@ db.serialize(() => {
     cnpj TEXT
   )`);
 
-  // Ordens de Serviço
   db.run(`CREATE TABLE IF NOT EXISTS ordens_servico (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     cliente_id INTEGER,
@@ -39,12 +47,12 @@ db.serialize(() => {
     formato TEXT,
     picotar TEXT,
     so_colado INTEGER,
-    numeracao INTEGER,
+    numeracao TEXT,
     condicoes_pagamento TEXT,
+    status TEXT DEFAULT 'Em andamento',
     FOREIGN KEY(cliente_id) REFERENCES clientes(id)
   )`);
 
-  // Itens da Ordem
   db.run(`CREATE TABLE IF NOT EXISTS itens_ordem (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ordem_servico_id INTEGER,
@@ -54,6 +62,15 @@ db.serialize(() => {
     valor_total REAL,
     FOREIGN KEY(ordem_servico_id) REFERENCES ordens_servico(id)
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS caixa (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tipo TEXT,
+  descricao TEXT,
+  valor REAL,
+  data TEXT DEFAULT (date('now'))
+);
+`)
 });
 
 module.exports = db;

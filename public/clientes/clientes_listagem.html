@@ -1,19 +1,19 @@
 <div class="listagem_ordem">
   <div class="box">
-    <h1>Ordens de Serviço</h1>
+    <h1>Clientes</h1>
     <div id="filtrosContainer" class="filtros-os" style="display: none;">
       <div class="row">
         <div class="col-4">
-          <label for="filtroCliente">Cliente:</label>
-          <input type="text" id="filtroCliente" placeholder="Nome do cliente">
+          <label for="filtroCliente">Nome:</label>
+          <input type="text" id="nome" placeholder="Nome do cliente">
         </div>
         <div class="col-4">
-          <label for="filtroDataEntrada">Data de Entrada:</label>
-          <input type="date" id="filtroDataEntrada">
+          <label for="filtroDataEntrada">CNPJ:</label>
+          <input type="text" id="cnpj">
         </div>
         <div class="col-4">
-          <label for="filtroDataEntrega">Data de Entrega:</label>
-          <input type="date" id="filtroDataEntrega">
+          <label for="filtroDataEntrega">Telefone:</label>
+          <input type="text" id="telefone">
         </div>
       </div>
       <div class="botoes-filtro">
@@ -23,17 +23,15 @@
     </div>
     <div class="actions">
       <button class="filter">Filtros</button>
-      <button class="export">Gerar Relatório</button>
     </div>
     <table class="tabela-os">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Cliente</th>
-          <th>Entrada</th>
-          <th>Entrega</th>
-          <th>Total (R$)</th>
-          <th>Status</th>
+          <th>Nome</th>
+          <th>CNPJ</th>
+          <th>Razão Social</th>
+          <th>Telefone</th>
           <th>Ações</th>
         </tr>
       </thead>

@@ -9,7 +9,6 @@
 
             <form id="formOS" class="needs-validation" novalidate>
 
-                <!-- SEÇÃO CLIENTE -->
                 <fieldset class="form-section">
                     <legend>Informações do Cliente</legend>
                     <div class="row">
@@ -26,7 +25,6 @@
                     </div>
                 </fieldset>
 
-                <!-- SEÇÃO DATAS -->
                 <fieldset class="form-section">
                     <legend>Prazos e Configurações</legend>
                     <div class="row">
@@ -73,7 +71,6 @@
                     </div>
                 </fieldset>
 
-                <!-- SEÇÃO PAPÉIS -->
                 <fieldset class="form-section">
                     <legend>Especificações de Papel</legend>
                     <div class="row">
@@ -130,7 +127,6 @@
                     </div>
                 </fieldset>
 
-                <!-- SEÇÃO VIAS E FORMATO -->
                 <fieldset class="form-section">
                     <legend>Vias e Formato</legend>
                     <div class="row">
@@ -177,7 +173,6 @@
                     </div>
                 </fieldset>
 
-                <!-- SEÇÃO ACABAMENTOS -->
                 <fieldset class="form-section">
                     <legend>Acabamentos</legend>
                     <div class="row">
@@ -198,15 +193,15 @@
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="form-check mt-4 check">
-                                <input type="checkbox" name="numeracao" id="numeracao" class="form-check-input">
-                                <label for="numeracao" class="form-check-label">Numeração</label>
+                            <div class="form-check mt-4">
+                                <label for="numeracao" class="form-label">Numeração:</label>
+                            <input type="text" name="numeracao" id="numeracao" class="form-control"
+                                placeholder="Ex: À vista, 30 dias, etc.">
                             </div>
                         </div>
                     </div>
                 </fieldset>
 
-                <!-- SEÇÃO PAGAMENTO -->
                 <fieldset class="form-section">
                     <legend>Condições de Pagamento</legend>
                     <div class="row">
@@ -218,18 +213,15 @@
                     </div>
                 </fieldset>
 
-                <!-- SEÇÃO ITENS -->
                 <fieldset class="form-section">
                     <legend>Itens da Ordem de Serviço</legend>
                     <div id="itensContainer">
-                        <!-- Itens serão adicionados dinamicamente aqui -->
                     </div>
                     <button type="button" class="btn btn-add-item btn-success" onclick="adicionarItem()">
                         <i class="bi bi-plus-circle"></i> Adicionar Item
                     </button>
                 </fieldset>
 
-                <!-- BOTÕES DE AÇÃO -->
                 <div class="col-12">
                     <button type="button" class="error">Cancelar</button>
                     <button type="submit" class="success">
@@ -240,6 +232,5 @@
         </div>
     </div>
 
-    <!-- <script src="ordem_servico.js"></script> -->
 
 </div>

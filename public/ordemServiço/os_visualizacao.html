@@ -1,0 +1,98 @@
+<div class="view-order">
+    <div class="container">
+        <div class="cadastro-ordem">
+            <h1 class="h2">Visualizar Ordem de Serviço</h1>
+            <small class="text-muted">Informações detalhadas da OS selecionada</small>
+
+            <fieldset class="form-section">
+                <legend>Informações do Cliente</legend>
+                <div class="row">
+                    <div class="col-6"><strong>Cliente:</strong> <span id="cliente_nome"></span></div>
+                    <div class="col-6"><strong>CNPJ:</strong> <span id="cliente_cnpj"></span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Prazos e Configurações</legend>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Entrada:</strong> <span id="os_entrada"></span></div>
+                    <div class="col-md-4"><strong>Entrega:</strong> <span id="os_entrega"></span></div>
+                    <div class="col-md-4"><strong>Prova:</strong> <span id="os_prova"></span></div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6"><strong>Alteração:</strong> <span id="os_alteracao"></span></div>
+                    <div class="col-md-6"><strong>Cores:</strong> <span id="os_cores"></span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Especificações de Papel</legend>
+
+                <div class="row mb-3">
+                    <div class="col-md-3"><strong>Sulfite:</strong> <span id="os_sulfite"></span></div>
+                    <div class="col-md-3"><strong>Duplex:</strong> <span id="os_duplex"></span></div>
+                    <div class="col-md-3"><strong>Couche:</strong> <span id="os_couche"></span></div>
+                    <div class="col-md-3"><strong>Bond:</strong> <span id="os_bond"></span></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4"><strong>Copiativo:</strong> <span id="os_copiativo"></span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Vias e Formato</legend>
+                <div class="row mb-3">
+                    <div class="col-md-8"><strong>Vias:</strong> <span id="os_vias"></span></div>
+                    <div class="col-md-4"><strong>Formato:</strong> <span id="os_formato"></span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Acabamentos</legend>
+                <div class="row">
+                    <div class="col-4"><strong>Picotar:</strong> <span id="os_picotar"></span></div>
+                    <div class="col-4"><strong>Só Colado:</strong> <span id="os_so_colado"></span></div>
+                    <div class="col-4"><strong>Numeração:</strong> <span id="os_numeracao"></span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Condições de Pagamento</legend>
+                <div class="row">
+                    <div class="col-12"><span id="os_pagamento"></span></div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Itens da Ordem de Serviço</legend>
+                <table border="1" width="100%" class="tabela-os">
+                    <thead>
+                        <tr>
+                            <th>Qtd</th>
+                            <th>Descrição</th>
+                            <th>Valor Unitário</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itens_os">
+                    </tbody>
+                </table>
+            </fieldset>
+
+            <div class="actions">
+                <button id="btnImprimir" onclick="gerarPdfOS(window.osDetalhe, window.clienteDetalhe, window.itensDetalhe)">Imprimir OS</button>
+                <button id="btnCancelar">Cancelar OS</button>
+                <button id="btnFinalizar">Finalizar OS</button>
+            </div>
+
+            
+        </div>
+    </div>
+
+    <script src="os_visualizacao.js"></script>
+
+
+</div>

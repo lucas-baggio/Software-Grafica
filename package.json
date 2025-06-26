@@ -1,25 +1,46 @@
 {
   "name": "grafica",
   "version": "1.0.0",
-  "main": "main.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron .",
-    "dev": "nodemon --watch main.js --watch preload.js --watch public --ext js,json,html,css --exec \"electron .\""
-  },
-  "keywords": [],
+  "description": "",
   "author": "",
   "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "electron": "^36.4.0",
-    "electron-reload": "^2.0.0-alpha.1",
-    "postcss": "^8.5.4",
-    "tailwindcss": "^4.1.8"
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "nodemon --watch main.js --watch preload.js --watch public --ext js,json,html,css --exec \"electron .\"",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.grafica.app",
+    "productName": "Sistema da Gráfica",
+    "files": [
+      "main.js",
+      "preload.js",
+      "db/**/*",               
+      "public/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "grafica.db",
+        "to": "grafica.db"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    }
   },
   "dependencies": {
     "sqlite3": "^5.1.7",
     "sweetalert2": "^11.22.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "electron-reload": "^2.0.0-alpha.1",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^4.1.8"
   }
 }
