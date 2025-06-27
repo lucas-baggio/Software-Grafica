@@ -9,6 +9,11 @@ JS \
 SQLlite \
 HTML/CSS
 
+## Imagens do Projeto
+
+![Tela de listagem](./os.jfif)
+![Tela de criação de OS](./os2.jfif)
+
 ## 🚀 Como Rodar o Projeto
 
 1° - `git clone https://github.com/GokuDBZSSJ7/Software-Grafica.git`
