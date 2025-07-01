@@ -7,6 +7,9 @@ const dbPath = isDev
   ? path.join(__dirname, '..', 'grafica.db') 
   : path.join(process.resourcesPath, 'grafica.db');
 
+console.log(dbPath, "DB");
+
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Erro ao abrir o banco de dados:', err.message);
@@ -65,10 +68,12 @@ db.serialize(() => {
 
   db.run(`CREATE TABLE IF NOT EXISTS caixa (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER,
   tipo TEXT,
   descricao TEXT,
   valor REAL,
-  data TEXT DEFAULT (date('now'))
+  data TEXT DEFAULT (date('now')),
+  FOREIGN KEY(cliente_id) REFERENCES clientes(id)
 );
 `)
 });

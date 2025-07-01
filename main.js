@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const db = require('./db/db');
 
-Menu.setApplicationMenu(null);
+// Menu.setApplicationMenu(null);
 
 function createWindow () {
   const win = new BrowserWindow({
@@ -283,6 +283,59 @@ ipcMain.handle('excluir-os', async (_, id) => {
         if (err2) return resolve({ ok: false });
         resolve({ ok: true });
       });
+    });
+  });
+});
+
+ipcMain.handle('salvar-caixa', async (_, lancamento) => {
+  return new Promise((resolve) => {
+    const query = `
+      INSERT INTO caixa (cliente_id, tipo, descricao, valor, data)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      lancamento.cliente_id,
+      lancamento.tipo,        
+      lancamento.descricao,
+      lancamento.valor,
+      lancamento.data || new Date().toISOString().split('T')[0]
+    ];
+
+    db.run(query, params, function (err) {
+      if (err) {
+        console.error('Erro ao salvar no caixa:', err);
+        resolve({ ok: false });
+      } else {
+        resolve({ ok: true, id: this.lastID });
+      }
+    });
+  });
+});
+
+ipcMain.handle('buscar-caixa', async () => {
+  return new Promise((resolve) => {
+    const query = `
+      SELECT
+        caixa.id,
+        caixa.cliente_id,
+        clientes.nome_fantasia,
+        caixa.tipo,
+        caixa.descricao,
+        caixa.valor,
+        caixa.data
+      FROM caixa
+      LEFT JOIN clientes ON caixa.cliente_id = clientes.id
+      ORDER BY date(caixa.data) DESC, caixa.id DESC
+    `;
+
+    db.all(query, (err, rows) => {
+      if (err) {
+        console.error('Erro ao buscar lançamentos do caixa:', err);
+        resolve([]);
+      } else {
+        resolve(rows);
+      }
     });
   });
 });

@@ -119,17 +119,25 @@
     os.so_colado = formOS.so_colado.checked ? 1 : 0;
     os.vias = getViasSelecionadas();
 
-    const itens = Array.from(itensContainer.querySelectorAll('.item')).map(item => ({
-      quantidade: parseInt(item.querySelector('.quantidade').value),
-      descricao: item.querySelector('.descricao').value,
-      valor_unitario: parseFloat(item.querySelector('.valor_unitario').value)
-    }));
+    const itens = Array.from(itensContainer.querySelectorAll('.item')).map(item => {
+      const quantidade = parseInt(item.querySelector('.quantidade').value) || 0;
+      const valor_unitario = parseFloat(item.querySelector('.valor_unitario').value) || 0;
+
+      return {
+        quantidade,
+        descricao: item.querySelector('.descricao').value,
+        valor_unitario,
+        valor_total: quantidade * valor_unitario
+      };
+    });
+
+    const somaFinal = itens.reduce((total, item) => total + item.valor_total, 0);
 
     console.log(os);
-    
+
 
     const envio = window.editandoOS
-      ? window.api.atualizarOS({ id: osId, os, itens }) 
+      ? window.api.atualizarOS({ id: osId, os, itens })
       : window.api.salvarOS({ os, itens });
 
     envio.then(res => {
@@ -141,6 +149,22 @@
           timer: 2000,
           showConfirmButton: false
         });
+
+        const hoje = new Date().toISOString().split('T')[0];
+
+        const entrada = {
+          "cliente_id": parseInt(os.cliente_id, 10),
+          "tipo": "Entrada",
+          "descricao": "",
+          "valor": somaFinal,
+          "data": hoje
+        }
+
+        console.log(entrada);
+
+        // return;
+
+        window.api.salvarCaixa(entrada);
 
         localStorage.removeItem('osEditId');
         formOS.reset();

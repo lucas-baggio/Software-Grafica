@@ -115,31 +115,4 @@ document.getElementById('btnLimparFiltro').addEventListener('click', () => {
   paginaAtual = 1;
   renderizarTabela(clientes);
 });
-
-  document.querySelector('.export').addEventListener('click', () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFontSize(14);
-    doc.text(`Relatório de Clientes`, 15, 15);
-
-    const body = clientes.map(c => [
-      c.id,
-      c.nome_fantasia,
-      c.razao_social || '-',
-      c.cnpj,
-      c.telefone
-    ]);
-
-    doc.autoTable({
-      head: [['ID', 'Nome Fantasia', 'Razão Social', 'CNPJ', 'Telefone']],
-      body,
-      startY: 25,
-      theme: 'grid',
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [0, 123, 255] }
-    });
-
-    doc.save(`relatorio_clientes.pdf`);
-  });
 })();

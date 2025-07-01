@@ -16,38 +16,20 @@
   }
 
   function carregarEntradas() {
-    window.api.buscarEntradas().then(dados => {
+    window.api.buscarCaixa().then(dados => {
       tabelaEntradas.innerHTML = '';
+      console.log(dados);
+      
       dados.forEach(ent => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${ent.id}</td>
-          <td>${ent.cliente}</td>
+          <td>${ent.nome_fantasia}</td>
+          <td>${ent.tipo}</td>
           <td>${formatarData(ent.data)}</td>
           <td>${formatarValor(ent.valor)}</td>
         `;
         tabelaEntradas.appendChild(tr);
-      });
-    });
-  }
-
-  function carregarSaidas() {
-    window.api.buscarSaidas().then(dados => {
-      tabelaSaidas.innerHTML = '';
-      dados.forEach(saida => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${saida.id}</td>
-          <td>${saida.descricao}</td>
-          <td>${formatarData(saida.data)}</td>
-          <td>${formatarValor(saida.valor)}</td>
-          <td>
-            <button onclick="excluirSaida(${saida.id})">
-              <span class="material-icons">delete</span>
-            </button>
-          </td>
-        `;
-        tabelaSaidas.appendChild(tr);
       });
     });
   }
