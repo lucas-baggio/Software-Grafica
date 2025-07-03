@@ -6,17 +6,17 @@ const db = require('./db/db');
 
 // Menu.setApplicationMenu(null);
 
-function createWindow () {
+function createWindow() {
   const win = new BrowserWindow({
-  width: 1200,
-  height: 800,
-  webPreferences: {
-    preload: path.join(__dirname, 'preload.js'),
-    contextIsolation: true,
-    nodeIntegration: false
-  }
-});
-  win.maximize(); 
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  win.maximize();
   win.loadFile('public/layout.html');
 }
 
@@ -130,31 +130,31 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
       sulfite, duplex, couche, adesivo, bond, copiativo, vias, formato,
       picotar, so_colado, numeracao, condicoes_pagamento
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      os.cliente_id, os.data_entrada, os.data_entrega, os.alteracao, os.mostrar_prova, os.cores,
-      os.sulfite || 0, os.duplex || 0, os.couche || 0, os.adesivo || 0, os.bond || 0, os.copiativo,
-      os.vias, os.formato, os.picotar, os.so_colado, os.numeracao, os.condicoes_pagamento
-    ],
-    function (err) {
-      if (err) {
-        console.error(err);
-        resolve({ ok: false });
-      } else {
-        const ordemId = this.lastID;
+      [
+        os.cliente_id, os.data_entrada, os.data_entrega, os.alteracao, os.mostrar_prova, os.cores,
+        os.sulfite || 0, os.duplex || 0, os.couche || 0, os.adesivo || 0, os.bond || 0, os.copiativo,
+        os.vias, os.formato, os.picotar, os.so_colado, os.numeracao, os.condicoes_pagamento
+      ],
+      function (err) {
+        if (err) {
+          console.error(err);
+          resolve({ ok: false });
+        } else {
+          const ordemId = this.lastID;
 
-        const stmt = db.prepare(`INSERT INTO itens_ordem (
+          const stmt = db.prepare(`INSERT INTO itens_ordem (
           ordem_servico_id, quantidade, descricao, valor_unitario, valor_total
         ) VALUES (?, ?, ?, ?, ?)`);
 
-        for (const item of itens) {
-          const total = item.quantidade * item.valor_unitario;
-          stmt.run(ordemId, item.quantidade, item.descricao, item.valor_unitario, total);
-        }
+          for (const item of itens) {
+            const total = item.quantidade * item.valor_unitario;
+            stmt.run(ordemId, item.quantidade, item.descricao, item.valor_unitario, total);
+          }
 
-        stmt.finalize();
-        resolve({ ok: true });
-      }
-    });
+          stmt.finalize();
+          resolve({ ok: true, id: ordemId });
+        }
+      });
   });
 });
 
@@ -290,13 +290,13 @@ ipcMain.handle('excluir-os', async (_, id) => {
 ipcMain.handle('salvar-caixa', async (_, lancamento) => {
   return new Promise((resolve) => {
     const query = `
-      INSERT INTO caixa (cliente_id, tipo, descricao, valor, data)
+      INSERT INTO caixa (ordem_servico_id, tipo, descricao, valor, data)
       VALUES (?, ?, ?, ?, ?)
     `;
 
     const params = [
-      lancamento.cliente_id,
-      lancamento.tipo,        
+      lancamento.ordem_servico_id,
+      lancamento.tipo,
       lancamento.descricao,
       lancamento.valor,
       lancamento.data || new Date().toISOString().split('T')[0]
@@ -317,16 +317,17 @@ ipcMain.handle('buscar-caixa', async () => {
   return new Promise((resolve) => {
     const query = `
       SELECT
-        caixa.id,
-        caixa.cliente_id,
-        clientes.nome_fantasia,
-        caixa.tipo,
-        caixa.descricao,
-        caixa.valor,
-        caixa.data
-      FROM caixa
-      LEFT JOIN clientes ON caixa.cliente_id = clientes.id
-      ORDER BY date(caixa.data) DESC, caixa.id DESC
+  caixa.id,
+  caixa.ordem_servico_id,
+  clientes.nome_fantasia,
+  caixa.tipo,
+  caixa.descricao,
+  caixa.valor,
+  caixa.data
+FROM caixa
+LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
+LEFT JOIN clientes ON ordens_servico.cliente_id = clientes.id
+ORDER BY date(caixa.data) DESC, caixa.id DESC
     `;
 
     db.all(query, (err, rows) => {

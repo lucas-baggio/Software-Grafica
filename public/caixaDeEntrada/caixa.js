@@ -57,21 +57,5 @@
     });
   });
 
-  window.excluirSaida = (id) => {
-    Swal.fire({
-      title: 'Tem certeza?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sim, excluir'
-    }).then(result => {
-      if (result.isConfirmed) {
-        window.api.excluirSaida(id).then(ok => {
-          if (ok) carregarSaidas();
-        });
-      }
-    });
-  };
-
   carregarEntradas();
-  carregarSaidas();
 })();

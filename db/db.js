@@ -68,12 +68,12 @@ db.serialize(() => {
 
   db.run(`CREATE TABLE IF NOT EXISTS caixa (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  cliente_id INTEGER,
+  ordem_servico_id INTEGER,
   tipo TEXT,
   descricao TEXT,
   valor REAL,
   data TEXT DEFAULT (date('now')),
-  FOREIGN KEY(cliente_id) REFERENCES clientes(id)
+  FOREIGN KEY(ordem_servico_id) REFERENCES ordens_servico(id)
 );
 `)
 });

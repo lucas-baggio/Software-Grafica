@@ -141,6 +141,7 @@
       : window.api.salvarOS({ os, itens });
 
     envio.then(res => {
+      
       if (res.ok) {
         Swal.fire({
           title: 'Sucesso!',
@@ -153,7 +154,7 @@
         const hoje = new Date().toISOString().split('T')[0];
 
         const entrada = {
-          "cliente_id": parseInt(os.cliente_id, 10),
+          "ordem_servico_id": parseInt(res.id, 10),
           "tipo": "Entrada",
           "descricao": "",
           "valor": somaFinal,
