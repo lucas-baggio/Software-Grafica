@@ -1,19 +1,16 @@
 <div class="listagem_ordem">
   <div class="box">
-    <h1>Ordens de Serviço</h1>
+    <h1>Orçamentos</h1>
+
     <div id="filtrosContainer" class="filtros-os" style="display: none;">
       <div class="row">
-        <div class="col-4">
+        <div class="col-6">
           <label for="filtroCliente">Cliente:</label>
           <input type="text" id="filtroCliente" placeholder="Nome do cliente">
         </div>
-        <div class="col-4">
-          <label for="filtroDataEntrada">Data de Entrada:</label>
-          <input type="date" id="filtroDataEntrada">
-        </div>
-        <div class="col-4">
-          <label for="filtroDataEntrega">Data de Entrega:</label>
-          <input type="date" id="filtroDataEntrega">
+        <div class="col-6">
+          <label for="filtroData">Data do orçamento:</label>
+          <input type="date" id="filtroData">
         </div>
       </div>
       <div class="botoes-filtro">
@@ -21,28 +18,28 @@
         <button id="btnLimparFiltro" class="btn-reset">Limpar Filtros</button>
       </div>
     </div>
+
     <div class="actions">
       <button class="filter">Filtros</button>
-      <button class="export">Gerar Relatório - Mensal</button>
-      <button class="export-dia">Gerar Relatório - Diário</button>
+      <button class="export">Gerar Relatório</button>
     </div>
+
     <table class="tabela-os">
       <thead>
         <tr>
           <th>ID</th>
           <th>Cliente</th>
-          <th>Entrada</th>
-          <th>Entrega</th>
+          <th>CNPJ</th>
+          <th>Data</th>
           <th>Total (R$)</th>
-          <th>Status</th>
           <th>Ações</th>
         </tr>
       </thead>
-      <tbody id="tabelaOS">
+      <tbody id="tabelaOrcamentos">
+        <!-- Linhas inseridas via JS -->
       </tbody>
     </table>
+
     <div id="paginacao" class="paginacao-os"></div>
-
-
   </div>
 </div>

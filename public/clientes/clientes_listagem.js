@@ -5,14 +5,11 @@
   let clientes = [];
   let paginaAtual = 1;
   const porPagina = 20;
+  let totalPaginas = 1;
 
-  function renderizarTabela(lista = clientes) {
+  function renderizarTabela() {
     tabela.innerHTML = '';
-    const inicio = (paginaAtual - 1) * porPagina;
-    const fim = inicio + porPagina;
-    const paginaClientes = lista.slice(inicio, fim);
-
-    paginaClientes.forEach(cliente => {
+    clientes.forEach(cliente => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${cliente.id}</td>
@@ -26,34 +23,37 @@
       `;
       tabela.appendChild(tr);
     });
-
-    renderizarPaginacao(lista);
   }
 
-  function renderizarPaginacao(lista = clientes) {
+  function renderizarPaginacao() {
     const paginacao = document.getElementById('paginacao');
     if (!paginacao) return;
 
     paginacao.innerHTML = '';
-    const totalPaginas = Math.ceil(lista.length / porPagina);
     for (let i = 1; i <= totalPaginas; i++) {
       const btn = document.createElement('button');
       btn.textContent = i;
       btn.className = i === paginaAtual ? 'pagina ativa' : 'pagina';
       btn.onclick = () => {
         paginaAtual = i;
-        renderizarTabela(lista);
+        carregarClientes();
       };
       paginacao.appendChild(btn);
     }
   }
 
-  function carregarClientes() {
-    window.api.buscarClientes().then(res => {
-      clientes = res;
-      paginaAtual = 1;
-      renderizarTabela();
-    });
+  async function carregarClientes() {
+    const { ok, clientes: dados, total } = await window.api.buscarClientes({ pagina: paginaAtual, limite: porPagina });
+
+    if (!ok) {
+      alert('Erro ao carregar clientes');
+      return;
+    }
+
+    clientes = dados;
+    totalPaginas = Math.ceil(total / porPagina);
+    renderizarTabela();
+    renderizarPaginacao();
   }
 
   carregarClientes();
@@ -88,31 +88,34 @@
   };
 
   document.querySelector('.filter').addEventListener('click', () => {
-  const filtros = document.getElementById('filtrosContainer');
-  filtros.style.display = filtros.style.display === 'none' ? 'block' : 'none';
-});
-
-document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
-  const nome = document.getElementById('nome').value.toLowerCase();
-  const cnpj = document.getElementById('cnpj').value.toLowerCase();
-  const telefone = document.getElementById('telefone').value.toLowerCase();
-
-  const filtradas = clientes.filter(cliente => {
-    const nomeOk = nome ? cliente.nome_fantasia.toLowerCase().includes(nome) : true;
-    const cnpjOk = cnpj ? cliente.cnpj.toLowerCase().includes(cnpj) : true;
-    const telOk = telefone ? cliente.telefone.toLowerCase().includes(telefone) : true;
-    return nomeOk && cnpjOk && telOk;
+    const filtros = document.getElementById('filtrosContainer');
+    filtros.style.display = filtros.style.display === 'none' ? 'block' : 'none';
   });
 
-  paginaAtual = 1;
-  renderizarTabela(filtradas);
-});
+  document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
+    const nome = document.getElementById('nome').value.toLowerCase();
+    const cnpj = document.getElementById('cnpj').value.toLowerCase();
+    const telefone = document.getElementById('telefone').value.toLowerCase();
 
-document.getElementById('btnLimparFiltro').addEventListener('click', () => {
-  document.getElementById('nome').value = '';
-  document.getElementById('cnpj').value = '';
-  document.getElementById('telefone').value = '';
-  paginaAtual = 1;
-  renderizarTabela(clientes);
-});
+    const filtradas = clientes.filter(cliente => {
+      const nomeOk = nome ? cliente.nome_fantasia.toLowerCase().includes(nome) : true;
+      const cnpjOk = cnpj ? cliente.cnpj.toLowerCase().includes(cnpj) : true;
+      const telOk = telefone ? cliente.telefone.toLowerCase().includes(telefone) : true;
+      return nomeOk && cnpjOk && telOk;
+    });
+
+    paginaAtual = 1;
+    clientes = filtradas;
+    totalPaginas = Math.ceil(filtradas.length / porPagina);
+    renderizarTabela();
+    renderizarPaginacao();
+  });
+
+  document.getElementById('btnLimparFiltro').addEventListener('click', () => {
+    document.getElementById('nome').value = '';
+    document.getElementById('cnpj').value = '';
+    document.getElementById('telefone').value = '';
+    paginaAtual = 1;
+    carregarClientes();
+  });
 })();

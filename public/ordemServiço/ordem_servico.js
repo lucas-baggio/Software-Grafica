@@ -163,7 +163,6 @@
 
         console.log(entrada);
 
-        // return;
 
         window.api.salvarCaixa(entrada);
 

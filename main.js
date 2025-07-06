@@ -4,6 +4,8 @@ const fs = require('fs');
 
 const db = require('./db/db');
 
+
+
 // Menu.setApplicationMenu(null);
 
 function createWindow() {
@@ -52,18 +54,28 @@ ipcMain.handle('salvar-cliente', async (_, dados) => {
   });
 });
 
-ipcMain.handle('buscar-clientes', async () => {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT id, nome_fantasia, cnpj, telefone, razao_social FROM clientes', (err, rows) => {
+ipcMain.handle('buscar-clientes', async (_, { pagina = 1, limite = 20 }) => {
+  return new Promise((resolve) => {
+    const offset = (pagina - 1) * limite;
+
+    db.all(`SELECT id, nome_fantasia, cnpj, telefone, razao_social FROM clientes LIMIT ? OFFSET ?`, [limite, offset], (err, rows) => {
       if (err) {
         console.error(err);
-        resolve([]);
+        resolve({ ok: false, clientes: [], total: 0 });
       } else {
-        resolve(rows);
+        db.get(`SELECT COUNT(*) as total FROM clientes`, (err2, result) => {
+          if (err2) {
+            console.error(err2);
+            resolve({ ok: false, clientes: [], total: 0 });
+          } else {
+            resolve({ ok: true, clientes: rows, total: result.total });
+          }
+        });
       }
     });
   });
 });
+
 
 ipcMain.handle('buscar-cliente-id', async (_, id) => {
   return new Promise((resolve) => {
@@ -158,8 +170,12 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
   });
 });
 
-ipcMain.handle('listar-os', async () => {
-  return new Promise((resolve, reject) => {
+ipcMain.handle('listar-os', async (_, params) => {
+  const pagina = params?.pagina || 1;
+  const limite = params?.limite || 20;
+  const offset = (pagina - 1) * limite;
+
+  return new Promise((resolve) => {
     const query = `
       SELECT 
         os.id, 
@@ -172,23 +188,26 @@ ipcMain.handle('listar-os', async () => {
       JOIN clientes c ON c.id = os.cliente_id
       LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
       GROUP BY 
-        os.id, 
-        os.data_entrada, 
-        os.data_entrega,
-        os.status, 
-        c.nome_fantasia
+        os.id, os.data_entrada, os.data_entrega,
+        os.status, c.nome_fantasia
       ORDER BY os.id DESC
+      LIMIT ? OFFSET ?
     `;
-    db.all(query, (err, rows) => {
+
+    db.all(query, [limite, offset], (err, rows) => {
       if (err) {
         console.error("Erro ao listar OS:", err);
-        resolve([]);
+        resolve({ ok: false, ordens: [], total: 0 });
       } else {
-        resolve(rows);
+        db.get(`SELECT COUNT(*) AS total FROM ordens_servico`, (err2, result) => {
+          const total = result?.total || 0;
+          resolve({ ok: true, ordens: rows, total });
+        });
       }
     });
   });
 });
+
 
 ipcMain.handle('imprimir-pagina', async (event) => {
   const win = BrowserWindow.getFocusedWindow();
@@ -290,14 +309,15 @@ ipcMain.handle('excluir-os', async (_, id) => {
 ipcMain.handle('salvar-caixa', async (_, lancamento) => {
   return new Promise((resolve) => {
     const query = `
-      INSERT INTO caixa (ordem_servico_id, tipo, descricao, valor, data)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO caixa (ordem_servico_id, tipo, descricao, destinatario, valor, data)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
 
     const params = [
       lancamento.ordem_servico_id,
       lancamento.tipo,
       lancamento.descricao,
+      lancamento.destinatario,
       lancamento.valor,
       lancamento.data || new Date().toISOString().split('T')[0]
     ];
@@ -313,33 +333,165 @@ ipcMain.handle('salvar-caixa', async (_, lancamento) => {
   });
 });
 
-ipcMain.handle('buscar-caixa', async () => {
+ipcMain.handle('buscar-caixa', async (_, { pagina = 1, limite = 20 }) => {
   return new Promise((resolve) => {
+    const offset = (pagina - 1) * limite;
+
     const query = `
       SELECT
-  caixa.id,
-  caixa.ordem_servico_id,
-  clientes.nome_fantasia,
-  caixa.tipo,
-  caixa.descricao,
-  caixa.valor,
-  caixa.data
-FROM caixa
-LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
-LEFT JOIN clientes ON ordens_servico.cliente_id = clientes.id
-ORDER BY date(caixa.data) DESC, caixa.id DESC
+        caixa.id,
+        caixa.ordem_servico_id,
+        caixa.tipo,
+        caixa.descricao,
+        caixa.destinatario,
+        caixa.valor,
+        caixa.data,
+        CASE
+          WHEN caixa.tipo = 'Entrada' THEN clientes.nome_fantasia
+          ELSE caixa.destinatario
+        END AS nome_exibicao
+      FROM caixa
+      LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
+      LEFT JOIN clientes ON ordens_servico.cliente_id = clientes.id
+      ORDER BY date(caixa.data) DESC, caixa.id DESC
+      LIMIT ? OFFSET ?
     `;
 
-    db.all(query, (err, rows) => {
+    db.all(query, [limite, offset], (err, rows) => {
       if (err) {
         console.error('Erro ao buscar lançamentos do caixa:', err);
-        resolve([]);
+        resolve({ ok: false, dados: [], total: 0 });
       } else {
-        resolve(rows);
+        db.get(`SELECT COUNT(*) as total FROM caixa`, (err2, res) => {
+          if (err2) {
+            console.error('Erro ao contar total do caixa:', err2);
+            resolve({ ok: false, dados: [], total: 0 });
+          } else {
+            resolve({ ok: true, dados: rows, total: res.total });
+          }
+        });
       }
     });
   });
 });
+
+ipcMain.handle('excluir-caixa', async (_, id) => {
+  return new Promise((resolve) => {
+    db.run(`DELETE FROM caixa WHERE id = ?`, [id], function (err) {
+      if (err) {
+        console.error('Erro ao excluir lançamento do caixa:', err);
+        return resolve({ ok: false });
+      }
+
+      resolve({ ok: true });
+    });
+  });
+});
+
+ipcMain.handle('salvar-orcamento', async (_, { orcamento, itens }) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO orcamentos (cliente_nome, cliente_cnpj, observacoes) VALUES (?, ?, ?)`,
+      [orcamento.cliente_nome, orcamento.cliente_cnpj, orcamento.observacoes],
+      function (err) {
+        if (err) return resolve({ ok: false });
+
+        const orcamentoId = this.lastID;
+
+        const stmt = db.prepare(`INSERT INTO itens_orcamento (orcamento_id, quantidade, descricao, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?)`);
+
+        for (const item of itens) {
+          stmt.run([orcamentoId, item.quantidade, item.descricao, item.valor_unitario, item.valor_total]);
+        }
+
+        stmt.finalize();
+        resolve({ ok: true });
+      }
+    );
+  });
+});
+
+ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20 }) => {
+  return new Promise((resolve) => {
+    const offset = (pagina - 1) * limite;
+
+    db.all(`
+      SELECT 
+        o.id, o.data, o.cliente_nome, o.cliente_cnpj
+      FROM orcamentos o
+      ORDER BY date(o.data) DESC
+      LIMIT ? OFFSET ?
+    `, [limite, offset], (err, rows) => {
+      if (err) {
+        console.error('Erro ao buscar orçamentos:', err);
+        resolve({ ok: false, orcamentos: [], total: 0 });
+      } else {
+        db.get(`SELECT COUNT(*) as total FROM orcamentos`, (err2, totalRes) => {
+          if (err2) {
+            console.error('Erro ao contar orçamentos:', err2);
+            resolve({ ok: false, orcamentos: [], total: 0 });
+          } else {
+            resolve({ ok: true, orcamentos: rows, total: totalRes.total });
+          }
+        });
+      }
+    });
+  });
+});
+
+
+ipcMain.handle('buscar-orcamento-completo', async (_, id) => {
+  return new Promise((resolve) => {
+    db.get(`SELECT * FROM orcamentos WHERE id = ?`, [id], (err, orcamento) => {
+      if (err || !orcamento) return resolve(null);
+
+      db.all(`SELECT * FROM itens_orcamento WHERE orcamento_id = ?`, [id], (err2, itens) => {
+        if (err2) return resolve(null);
+        resolve({ orcamento, itens });
+      });
+    });
+  });
+});
+
+ipcMain.handle('excluir-orcamento', async (_, id) => {
+  return new Promise((resolve) => {
+    db.run(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id], function (err) {
+      if (err) return resolve({ ok: false });
+
+      db.run(`DELETE FROM orcamentos WHERE id = ?`, [id], function (err2) {
+        if (err2) return resolve({ ok: false });
+
+        resolve({ ok: true });
+      });
+    });
+  });
+});
+
+ipcMain.handle('atualizar-orcamento', async (_, { id, orcamento, itens }) => {
+  return new Promise((resolve) => {
+    db.run(
+      `UPDATE orcamentos SET cliente_nome = ?, cliente_cnpj = ?, observacoes = ? WHERE id = ?`,
+      [orcamento.cliente_nome, orcamento.cliente_cnpj, orcamento.observacoes, id],
+      function (err) {
+        if (err) return resolve({ ok: false });
+
+        db.run(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id], (err2) => {
+          if (err2) return resolve({ ok: false });
+
+          const stmt = db.prepare(`INSERT INTO itens_orcamento (orcamento_id, quantidade, descricao, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?)`);
+
+          for (const item of itens) {
+            stmt.run([id, item.quantidade, item.descricao, item.valor_unitario, item.valor_total]);
+          }
+
+          stmt.finalize();
+          resolve({ ok: true });
+        });
+      }
+    );
+  });
+});
+
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

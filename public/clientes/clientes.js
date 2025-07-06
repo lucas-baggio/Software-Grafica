@@ -5,7 +5,6 @@
   const telefone = document.getElementById('telefone');
   const cnpj = document.getElementById('cnpj');
 
-  // Máscaras
   IMask(telefone, {
     mask: '(00) 00000-0000'
   });
@@ -16,7 +15,6 @@
 
   const clienteId = window.clienteEditId;
 
-  // Modo edição
   if (clienteId) {
     window.api.buscarClientePorId(clienteId).then(cliente => {
       if (!cliente) {
@@ -33,7 +31,6 @@
     });
   }
 
-  // Submit
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const cliente = Object.fromEntries(new FormData(form).entries());

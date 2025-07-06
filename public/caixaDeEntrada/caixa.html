@@ -2,20 +2,36 @@
   <div class="box">
     <h1>Controle de Caixa</h1>
 
-    <h2>Entradas/Saídas</h2>
-    <button id="btnNovaSaida">Novo</button>
+    <div class="resumo-caixa" style="display: flex; gap: 1rem; margin-bottom: 1rem; margin-top: 20px;">
+      <div class="card-resumo entrada" style="flex: 1; padding: 1rem; border-radius: 8px; background-color: #d4edda;">
+        <strong>Entradas</strong>
+        <p id="totalEntradas">R$ 0,00</p>
+      </div>
+      <div class="card-resumo saida" style="flex: 1; padding: 1rem; border-radius: 8px; background-color: #f8d7da;">
+        <strong>Saídas</strong>
+        <p id="totalSaidas">R$ 0,00</p>
+      </div>
+      <div class="card-resumo saldo" style="flex: 1; padding: 1rem; border-radius: 8px; background-color: #d1ecf1;">
+        <strong>Saldo</strong>
+        <p id="saldoFinal">R$ 0,00</p>
+      </div>
+    </div>
+
+    <button id="btnNovaSaida">Nova Saída</button>
     <table class="tabela-os">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Cliente</th>
+          <th>Cliente/Responsável</th>
           <th>Tipo</th>
           <th>Data</th>
           <th>Valor (R$)</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tabelaEntradas">
       </tbody>
     </table>
+    <div id="paginacao" class="paginacao-os"></div>
   </div>
 </div>

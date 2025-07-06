@@ -1,0 +1,50 @@
+<div class="cadastro-ordem">
+    <h1 style="text-align: center;">Orçamentação</h1>
+
+    <form id="formOrcamento">
+        <div class="row">
+            <div class="col-6">
+                <label>Cliente</label>
+                <select id="clienteSelect" name="cliente_id" required>
+                    <option value="">Selecione um cliente...</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label>CNPJ</label>
+                <input type="text" id="cliente_cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <label>Observações</label>
+                <textarea id="observacoes" rows="3" style="width: 100%; padding: 10px; border-radius: 4px;"></textarea>
+            </div>
+        </div>
+
+        <h2 class="mt-4">Itens do Orçamento</h2>
+
+        <table class="tabela-os">
+            <thead>
+                <tr>
+                    <th>Qtd</th>
+                    <th>Descrição</th>
+                    <th>Valor Unit.</th>
+                    <th>Total</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="itensOrcamento">
+                <!-- Itens adicionados via JS -->
+            </tbody>
+        </table>
+
+        <button type="button" id="btnAdicionarItem" class="btn-add-item">+ Adicionar Item</button>
+
+        <div class="row mt-4 orça">
+            <button id="btnSalvar" class="success">Salvar</button>
+            <button type="button" id="btnImprimir" class="filter" style="margin-left: 10px;">Imprimir</button>
+        </div>
+    </form>
+</div>
+<script src="orçamento.js"></script>
