@@ -79,36 +79,57 @@
   }
 
   btnNovaSaida.addEventListener('click', () => {
-    Swal.fire({
-      title: 'Nova Saída',
-      html: `
-        <input id="resp" class="swal2-input" placeholder="Responsável">
-        <input id="desc" class="swal2-input" placeholder="Descrição">
-        <input id="valor" type="number" class="swal2-input" placeholder="Valor">
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Salvar',
-      preConfirm: () => {
-        const descricao = document.getElementById('desc').value;
-        const destinatario = document.getElementById('resp').value;
-        const valor = parseFloat(document.getElementById('valor').value);
-        const tipo = "Saída";
+  Swal.fire({
+    title: 'Nova Saída',
+    html: `
+      <input id="resp" class="swal2-input" placeholder="Responsável">
+      <input id="desc" class="swal2-input" placeholder="Descrição">
+      <input id="valor" type="text" class="swal2-input" placeholder="Valor">
+    `,
+    didOpen: () => {
+      const input = document.getElementById('valor');
 
-        if (!descricao || !destinatario || isNaN(valor)) {
-          Swal.showValidationMessage('Preencha todos os campos corretamente');
-          return false;
+      input.addEventListener('input', () => {
+        let valor = input.value.replace(/\D/g, '');
+
+        if (valor === '') {
+          input.value = '';
+          return;
         }
 
-        return { descricao, destinatario, valor, tipo };
+        valor = (parseInt(valor) / 100).toFixed(2);
+        input.value = valor
+          .replace('.', ',')               // separador decimal
+          .replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // milhar
+      });
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Salvar',
+    preConfirm: () => {
+      const descricao = document.getElementById('desc').value;
+      const destinatario = document.getElementById('resp').value;
+      const valorStr = document.getElementById('valor').value;
+
+      const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+      const tipo = "Saída";
+
+      if (!descricao || !destinatario || isNaN(valor) || valor <= 0) {
+        Swal.showValidationMessage('Preencha todos os campos corretamente');
+        return false;
       }
-    }).then(result => {
-      if (result.isConfirmed) {
-        window.api.salvarCaixa(result.value).then(ok => {
-          if (ok) carregarEntradas();
-        });
-      }
-    });
+
+      return { descricao, destinatario, valor, tipo };
+    }
+  }).then(result => {
+    if (result.isConfirmed) {
+      window.api.salvarCaixa(result.value).then(res => {
+        if (res.ok) carregarEntradas();
+        else Swal.fire('Erro', 'Não foi possível salvar a saída.', 'error');
+      });
+    }
   });
+});
+
 
   window.excluir = function (id) {
     Swal.fire({

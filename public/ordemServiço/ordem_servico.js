@@ -9,7 +9,14 @@
   let tomSelectCliente = null;
   let clienteIdParaSelecionar = null;
 
-  window.api.buscarClientes().then(clientes => {
+  window.api.buscarClientes({ pagina: 1, limite: 100 }).then(resposta => {
+    if (!resposta.ok) {
+      console.error("Erro ao buscar clientes");
+      return;
+    }
+
+    const { clientes } = resposta;
+
     clientes.forEach(cliente => {
       const option = document.createElement('option');
       option.value = cliente.id;
@@ -27,6 +34,7 @@
       tomSelectCliente.setValue(clienteIdParaSelecionar);
     }
   });
+
 
   if (osId) {
     window.api.buscarOSDetalhada(parseInt(osId)).then(res => {
@@ -141,7 +149,7 @@
       : window.api.salvarOS({ os, itens });
 
     envio.then(res => {
-      
+
       if (res.ok) {
         Swal.fire({
           title: 'Sucesso!',
@@ -156,6 +164,7 @@
         const entrada = {
           "ordem_servico_id": parseInt(res.id, 10),
           "tipo": "Entrada",
+          // "c": "",
           "descricao": "",
           "valor": somaFinal,
           "data": hoje
@@ -166,10 +175,15 @@
 
         window.api.salvarCaixa(entrada);
 
+        window.editandoOS = false;
+        window.osEditId = null;
         localStorage.removeItem('osEditId');
+
+        // ✅ Resetar formulário
         formOS.reset();
         itensContainer.innerHTML = '';
-        window.editandoOS = false;
+        if (tomSelectCliente) tomSelectCliente.clear();
+        clienteIdParaSelecionar = null;
       } else {
         Swal.fire({
           title: 'Erro!',

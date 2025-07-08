@@ -24,6 +24,10 @@
       {
         "from": "grafica.db",
         "to": "grafica.db"
+      },
+      {
+        "from": "logo.png",
+        "to": "logo.png"
       }
     ],
     "win": {

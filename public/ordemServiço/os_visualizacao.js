@@ -13,9 +13,11 @@
 
     console.log("API disponível?", window.api);
 
+    const hoje = new Date().toISOString().split("T")[0];
+
     function gerarPdfOS(os, cliente, itens) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF("p", "mm", "a4");
 
         const formatarData = (dataISO) => {
             if (!dataISO) return '';
@@ -30,66 +32,140 @@
             }).format(valor);
         };
 
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.text('GRÁFICA', 105, 20, { align: 'center' });
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'normal');
-        doc.text('Ordem de Serviço', 105, 28, { align: 'center' });
-        doc.line(15, 32, 195, 32); 
+        const margem = 10;
+        doc.setFont("courier", "normal");
+        doc.setFontSize(10);
 
-        let y = 40;
-        doc.setFont(undefined, 'bold');
-        doc.text(`OS Nº:`, 15, y);
-        doc.text(`Cliente:`, 15, y + 8);
-        doc.text(`CNPJ:`, 15, y + 16);
-        doc.text(`Entrada:`, 120, y);
-        doc.text(`Entrega:`, 120, y + 8);
+        doc.setDrawColor(0);
+        doc.rect(margem, margem, 190, 270);
 
-        doc.setFont(undefined, 'normal');
-        doc.text(`${os.id}`, 35, y);
-        doc.text(`${cliente.nome_fantasia}`, 35, y + 8);
-        doc.text(`${cliente.cnpj}`, 35, y + 16);
-        doc.text(`${formatarData(os.data_entrada)}`, 145, y);
-        doc.text(`${formatarData(os.data_entrega)}`, 145, y + 8);
+        const yTopoCabecalho = margem;
+        const yBaseCabecalho = margem + 35;
 
-        doc.autoTable({
-            startY: y + 25,
-            head: [['Qtd.', 'Descrição', 'Valor Unitário', 'Subtotal']],
-            body: itens.map(item => [
-                item.quantidade,
-                item.descricao,
-                formatarValor(item.valor_unitario),
-                formatarValor(item.quantidade * item.valor_unitario)
-            ]),
-            styles: { halign: 'center', fontSize: 11 },
-            headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255] },
-            columnStyles: {
-                1: { halign: 'left' }, 
-            }
+        const logoPath = window.api.join(window.api.appPath, 'logo.png');
+        const logoBase64 = window.api.readFileBase64(logoPath);
+        const logoDataURL = `data:image/png;base64,${logoBase64}`;
+        doc.addImage(logoDataURL, 'PNG', margem + 2, margem + 2, 45, 30);
+
+        doc.line(margem + 50, yTopoCabecalho, margem + 50, yBaseCabecalho);
+
+        let xGraf = margem + 65;
+        let yGraf = margem + 6;
+        doc.text("Telefone: (17) 3631-4165", xGraf, yGraf);
+        doc.text("graficaimage@graficaimage.com.br", xGraf, yGraf += 5);
+        doc.text("I.E.: 614.104.129.110", xGraf, yGraf += 5);
+        doc.text("CNPJ: 09.521.624/0001-29", xGraf, yGraf += 5);
+        doc.text("Rua 27, 739 – Centro", xGraf, yGraf += 5);
+        doc.text("Santa Fé do Sul - SP", xGraf, yGraf += 5);
+
+        doc.line(margem + 142, yTopoCabecalho, margem + 142, yBaseCabecalho);
+
+        const xRecibo = margem + 150;
+        const yRecibo = margem + 2;
+        doc.setFont("courier", "bold");
+        doc.text("RECIBO", xRecibo + 13, yRecibo + 7);
+        doc.setFont("courier", "normal");
+        doc.text(`Nº ${String(os.id).padStart(5, "0")}`, xRecibo + 5, yRecibo + 14);
+        doc.text(`${formatarData(hoje)}`, xRecibo + 5, yRecibo + 19);
+
+        let yClienteTop = margem + 35;
+        let y = yClienteTop;
+        const labelX = margem + 2;
+        const valueX = margem + 50;
+
+        const campos = [
+            ["Nome Fantasia:", cliente.nome_fantasia],
+            ["Razão Social:", cliente.razao_social || "---"],
+            ["Endereço:", cliente.endereco || "---"],
+            ["Cidade:", cliente.cidade || "---"],
+            ["Fone:", cliente.telefone || "---"],
+            ["I.E.:", cliente.ie || "---"],
+            ["CNPJ/CPF:", cliente.cnpj || "---"],
+            ["INSC. MUN.:", cliente.inscricao_estadual || "---"]
+        ];
+
+        campos.forEach(([label, valor], i) => {
+            doc.setFont("courier", "bold");
+            const yTexto = y + i * 6 + 4;
+            doc.text(label.toUpperCase(), labelX, yTexto);
+            doc.text(String(valor).toUpperCase(), valueX, yTexto);
+            doc.setFont("courier", "normal");
         });
 
+        const linhaAltura = campos.length * 6;
+        const yClienteBottom = yClienteTop + linhaAltura;
+        const coluna1 = margem;
+        const coluna2 = margem + 48;
+        const coluna3 = margem + 190;
+
+        doc.line(coluna1, yClienteTop, coluna1, yClienteBottom);
+        doc.line(coluna3, yClienteTop, coluna3, yClienteBottom);
+        doc.line(coluna1, yClienteTop, coluna3, yClienteTop);
+        doc.line(coluna1, yClienteBottom, coluna3, yClienteBottom);
+
+        y += campos.length * 6 + 4;
+        doc.setFont("courier", "bold");
+        doc.text("OBSERVAÇÕES:", labelX, y);
+        doc.setFont("courier", "normal");
+
+        const yTabela = y + 20;
+        const colX = [margem, margem + 90, margem + 120, margem + 150];
+        const colW = [90, 30, 30, 30];
+        const altura = 7;
+
+        doc.setFont("courier", "bold");
+        doc.rect(colX[0], yTabela, colW[0], altura);
+        doc.rect(colX[1], yTabela, colW[1], altura);
+        doc.rect(colX[2], yTabela, colW[2], altura);
+        doc.rect(colX[3], yTabela, colW[3], altura);
+        doc.text("DESCRIÇÃO", colX[0] + 2, yTabela + 5);
+        doc.text("QUANT.", colX[1] + 2, yTabela + 5);
+        doc.text("VALOR UN.", colX[2] + 2, yTabela + 5);
+        doc.text("VALOR TOTAL", colX[3] + 2, yTabela + 5);
+
+        const linhasNecessarias = Math.max(itens.length, 6);
+        const desconto = os.desconto || 0;
         const total = itens.reduce((acc, item) => acc + item.quantidade * item.valor_unitario, 0);
-        const yTotal = doc.lastAutoTable.finalY + 10;
-        doc.setFont(undefined, 'bold');
-        doc.text(`Total Geral: ${formatarValor(total)}`, 190, yTotal, { align: 'right' });
 
-        doc.setFont(undefined, 'bold');
-        doc.text('Condições de Pagamento:', 15, yTotal + 10);
-        doc.setFont(undefined, 'normal');
-        doc.text(os.condicoes_pagamento || '---', 15, yTotal + 16);
+        doc.setFont("courier", "normal");
+        for (let i = 0; i < linhasNecessarias; i++) {
+            const yLinha = yTabela + altura * (i + 1);
+            doc.rect(colX[0], yLinha, colW[0], altura);
+            doc.rect(colX[1], yLinha, colW[1], altura);
+            doc.rect(colX[2], yLinha, colW[2], altura);
+            doc.rect(colX[3], yLinha, colW[3], altura);
 
-        doc.line(15, 260, 105, 260);
-        doc.text('Assinatura do Cliente', 15, 265);
+            if (i < itens.length) {
+                const item = itens[i];
+                doc.text(item.descricao.toUpperCase(), colX[0] + 2, yLinha + 5);
+                doc.text(String(item.quantidade), colX[1] + 2, yLinha + 5);
+                doc.text(formatarValor(item.valor_unitario), colX[2] + 2, yLinha + 5);
+                doc.text(formatarValor(item.quantidade * item.valor_unitario), colX[3] + 2, yLinha + 5);
+            }
+        }
 
-        const dataHoje = new Date();
-        const dataStr = dataHoje.toLocaleDateString('pt-BR');
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Emitido em: ${dataStr}`, 15, 285);
-        doc.text('Gráfica • Santa Fé do Sul/SP', 105, 285, { align: 'center' });
+        let yLinha = yTabela + altura * (linhasNecessarias + 1);
+        //   doc.setFont("courier", "bold");
+        //   doc.rect(colX[2], yLinha, colW[1], altura);
+        //   doc.text("DESCONTO R$", colX[2] + 2, yLinha + 5);
+        //   doc.setFont("courier", "normal");
+        //   doc.text(formatarValor(desconto), colX[3] + 2, yLinha + 5);
 
-        doc.save(`OS_${os.id}.pdf`);
+        //   yLinha += altura;
+        doc.setFont("courier", "bold");
+        doc.rect(colX[2], yLinha, colW[2] + colW[3], altura);
+        doc.text("TOTAL R$", colX[2] + 2, yLinha + 5);
+        doc.setFont("courier", "normal");
+        doc.text(formatarValor(total), colX[3] + 2, yLinha + 5);
+
+        yLinha += altura + 0;
+        doc.setFont("courier", "bold");
+        doc.text("DATA DE ENTREGA:", margem + 0, yLinha);
+        doc.setFont("courier", "normal");
+
+        doc.text(formatarData(os.data_entrega), margem + 40, yLinha);
+
+        doc.save(`Recibo_${os.id}.pdf`);
     }
 
 
@@ -137,7 +213,7 @@
         document.getElementById('os_alteracao').textContent = os.alteracao ? 'Sim' : 'Não';
         document.getElementById('os_copiativo').textContent = boolToSimNao(os.copiativo);
         document.getElementById('os_so_colado').textContent = boolToSimNao(os.so_colado);
-        document.getElementById('os_numeracao').textContent = boolToSimNao(os.numeracao);
+        document.getElementById('os_numeracao').textContent = os.numeracao || '-';
 
         const tbody = document.getElementById('itens_os');
         itens.forEach(item => {

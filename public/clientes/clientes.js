@@ -49,6 +49,7 @@
         }).then(() => {
           if (!clienteId) form.reset();
           else {
+            window.clienteEditId = null; // ✅ limpa o modo edição
             localStorage.removeItem('clienteEditId');
             carregarPagina('clientes/listagem.html');
           }

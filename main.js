@@ -6,7 +6,7 @@ const db = require('./db/db');
 
 
 
-// Menu.setApplicationMenu(null);
+Menu.setApplicationMenu(null);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -15,7 +15,9 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: false, // importante para usar fs/path
+      additionalArguments: [`--appPath=${__dirname}`]
     }
   });
   win.maximize();
@@ -181,7 +183,8 @@ ipcMain.handle('listar-os', async (_, params) => {
         os.id, 
         os.data_entrada, 
         os.data_entrega,
-        os.status, 
+        os.status,
+        os.created_at,
         c.nome_fantasia AS cliente,
         COALESCE(SUM(io.valor_total), 0) AS total
       FROM ordens_servico os
@@ -411,33 +414,57 @@ ipcMain.handle('salvar-orcamento', async (_, { orcamento, itens }) => {
   });
 });
 
-ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20 }) => {
+ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20, cliente = '', data = '' }) => {
   return new Promise((resolve) => {
     const offset = (pagina - 1) * limite;
 
-    db.all(`
+    const where = [];
+    const params = [];
+
+    if (cliente) {
+      where.push(`o.cliente_nome LIKE ?`);
+      params.push(`%${cliente}%`);
+    }
+
+    if (data) {
+      where.push(`DATE(o.data) = ?`);
+      params.push(data); // esperado: 'YYYY-MM-DD'
+    }
+
+    const whereSQL = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const query = `
       SELECT 
         o.id, o.data, o.cliente_nome, o.cliente_cnpj
       FROM orcamentos o
+      ${whereSQL}
       ORDER BY date(o.data) DESC
       LIMIT ? OFFSET ?
-    `, [limite, offset], (err, rows) => {
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM orcamentos o
+      ${whereSQL}
+    `;
+
+    db.all(query, [...params, limite, offset], (err, rows) => {
       if (err) {
         console.error('Erro ao buscar orçamentos:', err);
-        resolve({ ok: false, orcamentos: [], total: 0 });
-      } else {
-        db.get(`SELECT COUNT(*) as total FROM orcamentos`, (err2, totalRes) => {
-          if (err2) {
-            console.error('Erro ao contar orçamentos:', err2);
-            resolve({ ok: false, orcamentos: [], total: 0 });
-          } else {
-            resolve({ ok: true, orcamentos: rows, total: totalRes.total });
-          }
-        });
+        return resolve({ ok: false, orcamentos: [], total: 0 });
       }
+
+      db.get(countQuery, params, (err2, totalRes) => {
+        if (err2) {
+          console.error('Erro ao contar orçamentos:', err2);
+          return resolve({ ok: false, orcamentos: [], total: 0 });
+        }
+
+        resolve({ ok: true, orcamentos: rows, total: totalRes.total });
+      });
     });
   });
 });
+
 
 
 ipcMain.handle('buscar-orcamento-completo', async (_, id) => {

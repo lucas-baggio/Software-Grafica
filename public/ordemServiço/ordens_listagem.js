@@ -61,59 +61,59 @@
   }
 
   function renderizarPaginacao() {
-  const paginacao = document.getElementById('paginacao');
-  if (!paginacao) return;
+    const paginacao = document.getElementById('paginacao');
+    if (!paginacao) return;
 
-  paginacao.innerHTML = '';
+    paginacao.innerHTML = '';
 
-  const maxBotoes = 5; // Quantos botões mostrar ao redor da página atual
-  const mostrarEllipsis = totalPaginas > maxBotoes + 2;
+    const maxBotoes = 5; // Quantos botões mostrar ao redor da página atual
+    const mostrarEllipsis = totalPaginas > maxBotoes + 2;
 
-  const criarBotao = (i) => {
-    const btn = document.createElement('button');
-    btn.textContent = i;
-    btn.className = i === paginaAtual ? 'pagina ativa' : 'pagina';
-    btn.onclick = () => {
-      paginaAtual = i;
-      carregarTabelaOS();
+    const criarBotao = (i) => {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      btn.className = i === paginaAtual ? 'pagina ativa' : 'pagina';
+      btn.onclick = () => {
+        paginaAtual = i;
+        carregarTabelaOS();
+      };
+      paginacao.appendChild(btn);
     };
-    paginacao.appendChild(btn);
-  };
 
-  if (mostrarEllipsis) {
-    // Sempre mostra o botão da página 1
-    criarBotao(1);
+    if (mostrarEllipsis) {
+      // Sempre mostra o botão da página 1
+      criarBotao(1);
 
-    // Mostra "..." se necessário antes da página atual
-    if (paginaAtual > 3) {
-      const span = document.createElement('span');
-      span.textContent = '...';
-      paginacao.appendChild(span);
-    }
+      // Mostra "..." se necessário antes da página atual
+      if (paginaAtual > 3) {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        paginacao.appendChild(span);
+      }
 
-    // Botões centrais
-    const start = Math.max(2, paginaAtual - 1);
-    const end = Math.min(totalPaginas - 1, paginaAtual + 1);
-    for (let i = start; i <= end; i++) {
-      criarBotao(i);
-    }
+      // Botões centrais
+      const start = Math.max(2, paginaAtual - 1);
+      const end = Math.min(totalPaginas - 1, paginaAtual + 1);
+      for (let i = start; i <= end; i++) {
+        criarBotao(i);
+      }
 
-    // Mostra "..." depois
-    if (paginaAtual < totalPaginas - 2) {
-      const span = document.createElement('span');
-      span.textContent = '...';
-      paginacao.appendChild(span);
-    }
+      // Mostra "..." depois
+      if (paginaAtual < totalPaginas - 2) {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        paginacao.appendChild(span);
+      }
 
-    // Última página
-    criarBotao(totalPaginas);
-  } else {
-    // Paginação simples se poucas páginas
-    for (let i = 1; i <= totalPaginas; i++) {
-      criarBotao(i);
+      // Última página
+      criarBotao(totalPaginas);
+    } else {
+      // Paginação simples se poucas páginas
+      for (let i = 1; i <= totalPaginas; i++) {
+        criarBotao(i);
+      }
     }
   }
-}
 
   document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
     filtrosAtuais = {
@@ -198,7 +198,12 @@
 
     const dataAtual = `${dia}/${mes}/${ano}`;
     const dataComparacao = `${ano}-${mes}-${dia}`;
-    const ordensDia = ordens.filter(os => os.data_entrada === dataComparacao);
+    console.log(ordens);
+    
+    const ordensDia = ordens.filter(os => {
+      const dataCriacao = os.created_at?.substring(0, 10);
+      return dataCriacao === dataComparacao;
+    });
 
     const body = ordensDia.map(os => [
       os.id,

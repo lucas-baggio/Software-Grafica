@@ -4,6 +4,8 @@
 
   if (!tabela || !paginacao) return;
 
+  let filtrosAtuais = {};
+
   let orcamentos = [];
   let paginaAtual = 1;
   const porPagina = 20;
@@ -58,7 +60,13 @@
   }
 
   async function carregarOrcamentos() {
-    const { ok, orcamentos: dados, total } = await window.api.buscarOrcamentos({ pagina: paginaAtual, limite: porPagina });
+    const filtros = {
+      pagina: paginaAtual,
+      limite: porPagina,
+      ...filtrosAtuais // ← aplica os filtros definidos
+    };
+
+    const { ok, orcamentos: dados, total } = await window.api.buscarOrcamentos(filtros);
 
     if (!ok) {
       alert('Erro ao carregar orçamentos');
@@ -113,4 +121,26 @@
       }
     });
   };
+
+  document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
+    filtrosAtuais = {
+      cliente: document.getElementById('filtroCliente').value,
+      data: document.getElementById('filtroData').value
+    };
+    paginaAtual = 1;
+    carregarOrcamentos();
+  });
+
+  document.getElementById('btnLimparFiltro').addEventListener('click', () => {
+    filtrosAtuais = {};
+    document.getElementById('filtroCliente').value = '';
+    document.getElementById('filtroData').value = '';
+    paginaAtual = 1;
+    carregarOrcamentos();
+  });
+
+  document.querySelector('.filter').addEventListener('click', () => {
+    const filtros = document.getElementById('filtrosContainer');
+    filtros.style.display = filtros.style.display === 'none' ? 'block' : 'none';
+  });
 })();

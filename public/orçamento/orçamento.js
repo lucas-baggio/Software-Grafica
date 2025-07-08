@@ -25,10 +25,15 @@
     orcamentoId = window.orcamentoVisualizacaoId;
   }
 
-  window.api.buscarClientes().then(dados => {
-    clientes = dados;
+  window.api.buscarClientes({ pagina: 1, limite: 100 }).then(dados => {
+    if (!dados.ok) {
+      console.error("Erro ao buscar clientes");
+      return;
+    }
 
-    dados.forEach(cliente => {
+    clientes = dados.clientes; // Armazena só o array de clientes
+
+    dados.clientes.forEach(cliente => {
       const option = document.createElement('option');
       option.value = cliente.id;
       option.textContent = cliente.nome_fantasia;
@@ -49,6 +54,7 @@
       carregarOrcamentoParaEdicao(orcamentoId);
     }
   });
+
 
   clienteSelect.addEventListener('change', () => {
     const idSelecionado = clienteSelect.value;
@@ -187,83 +193,101 @@
         form.reset();
         itensContainer.innerHTML = '';
         tomSelectCliente.clear();
+        window.orcamentoEditId = null;
+        window.orcamentoVisualizacaoId = null;
+        modoEdicao = false;
+        modoVisualizacao = false;
+        orcamentoId = null;
       }
+      window.orcamentoEditId = null;
+      window.orcamentoVisualizacaoId = null;
+      modoEdicao = false;
+      modoVisualizacao = false;
+      orcamentoId = null;
+      form.reset();
+      itensContainer.innerHTML = '';
+      tomSelectCliente.clear();
     } else {
       Swal.fire('Erro', 'Não foi possível salvar o orçamento.', 'error');
     }
   });
 
-document.getElementById('btnImprimir').addEventListener('click', () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  document.getElementById('btnImprimir').addEventListener('click', () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-  doc.setFillColor(255, 204, 0);
-  doc.rect(0, 0, 10, 297, 'F');
+    doc.setFillColor(255, 204, 0);
+    doc.rect(0, 0, 10, 297, 'F');
 
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0);
-  doc.text('Cartão & Cartão Gráfica Ltda', 70, 10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(150, 0, 0);
-  doc.text('CNPJ: 09.523.624/0001-29', 70, 15);
-  doc.text('Fone: (17) 3631-4165 / 99148-7110', 70, 20);
-  doc.setTextColor(128, 0, 128);
-  doc.text('graficaimage@graficaimage.com.br', 70, 25);
-  doc.setTextColor(0);
-  doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 70, 30);
+    const logoPath = window.api.join(window.api.appPath, 'logo.png');
+    const logoBase64 = window.api.readFileBase64(logoPath);
+    const logoDataURL = `data:image/png;base64,${logoBase64}`;
+    doc.addImage(logoDataURL, 'PNG', 20, 10, 45, 30);
 
-  const clienteNome = document.getElementById('clienteSelect')
-  ?.selectedOptions[0]?.textContent?.trim() || 'CLIENTE';
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0);
-  doc.text(`${clienteNome.toUpperCase()}`, 105, 45, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text('Curtolo & Curtolo Gráfica Ltda', 100, 10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 0, 0);
+    doc.text('CNPJ: 09.523.624/0001-29', 100, 15);
+    doc.text('Telefone: (17) 3631-4165 / 99148-7110', 100, 20);
+    doc.setTextColor(128, 0, 128);
+    doc.text('graficaimage@graficaimage.com.br', 100, 25);
+    doc.setTextColor(0);
+    doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 100, 30);
 
-  const itens = Array.from(document.querySelectorAll('.item')).map((itemEl, idx) => {
-  const qtdInput = itemEl.querySelector('.quantidade');
-  const descInput = itemEl.querySelector('.descricao');
-  const valorInput = itemEl.querySelector('.valor_unitario');
+    const clienteNome = document.getElementById('clienteSelect')
+      ?.selectedOptions[0]?.textContent?.trim() || 'CLIENTE';
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(`${clienteNome.toUpperCase()}`, 105, 45, { align: 'center' });
 
-  if (!qtdInput || !descInput || !valorInput) return null;
+    const itens = Array.from(document.querySelectorAll('.item')).map((itemEl, idx) => {
+      const qtdInput = itemEl.querySelector('.quantidade');
+      const descInput = itemEl.querySelector('.descricao');
+      const valorInput = itemEl.querySelector('.valor_unitario');
 
-  const qtd = qtdInput.value;
-  const desc = descInput.value;
-  const valor = parseFloat(valorInput.value || 0);
-  const total = qtd * valor;
+      if (!qtdInput || !descInput || !valorInput) return null;
 
-  return [
-    String(idx + 1).padStart(2, '0'),
-    qtd,
-    desc,
-    valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  ];
-}).filter(item => item !== null);
+      const qtd = qtdInput.value;
+      const desc = descInput.value;
+      const valor = parseFloat(valorInput.value || 0);
+      const total = qtd * valor;
 
-  doc.autoTable({
-    startY: 55,
-    head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
-    body: itens,
-    theme: 'grid',
-    styles: { fontSize: 10, halign: 'left', cellPadding: 2 },
-    headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold', halign: 'center' },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 12 },
-      1: { halign: 'center', cellWidth: 20 },
-      2: { cellWidth: 85 },
-      3: { halign: 'right', cellWidth: 30 },
-      4: { halign: 'right', cellWidth: 30 }
-    }
+      return [
+        String(idx + 1).padStart(2, '0'),
+        qtd,
+        desc,
+        valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+        total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      ];
+    }).filter(item => item !== null);
+
+    doc.autoTable({
+      startY: 55,
+      head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
+      body: itens,
+      theme: 'grid',
+      styles: { fontSize: 10, halign: 'left', cellPadding: 2 },
+      headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { halign: 'center', cellWidth: 20 },
+        2: { cellWidth: 85 },
+        3: { halign: 'right', cellWidth: 30 },
+        4: { halign: 'right', cellWidth: 30 }
+      }
+    });
+
+    const finalY = doc.lastAutoTable.finalY;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text('Documento gerado automaticamente pelo Sistema da Gráfica', 105, finalY + 15, { align: 'center' });
+
+    const nomeArquivo = `orcamento_${clienteNome.replace(/\s+/g, '_').toLowerCase()}.pdf`;
+    doc.save(nomeArquivo);
   });
-
-  const finalY = doc.lastAutoTable.finalY;
-  doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text('Documento gerado automaticamente pelo Sistema da Gráfica', 105, finalY + 15, { align: 'center' });
-
-  const nomeArquivo = `orcamento_${clienteNome.replace(/\s+/g, '_').toLowerCase()}.pdf`;
-  doc.save(nomeArquivo);
-});
 
 })();

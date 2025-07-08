@@ -1,14 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-
-// Caminho da pasta de backup
-const backupDir = path.join(__dirname, '..', 'backups');
-
-// Cria a pasta se não existir
-if (!fs.existsSync(backupDir)) {
-  fs.mkdirSync(backupDir);
-}
+const { app } = require('electron');
 
 // Verifica ambiente
 const isDev = process.env.NODE_ENV === 'development';
@@ -18,11 +11,19 @@ const dbPath = isDev
   ? path.join(__dirname, '..', 'grafica.db')
   : path.join(process.resourcesPath, 'grafica.db');
 
-console.log(dbPath, "DB");
+// Caminho da pasta segura de backup (fora do asar)
+const backupDir = isDev
+  ? path.join(__dirname, '..', 'backups')
+  : path.join(app.getPath('userData'), 'backups');
 
-// Função que realiza o backup diário
+// Cria a pasta se não existir
+if (!fs.existsSync(backupDir)) {
+  fs.mkdirSync(backupDir, { recursive: true });
+}
+
+// Função de backup
 function fazerBackupDiario() {
-  const dataHoje = new Date().toISOString().split('T')[0]; // AAAA-MM-DD
+  const dataHoje = new Date().toISOString().split('T')[0];
   const nomeBackup = `grafica_${dataHoje}.db`;
   const caminhoDestino = path.join(backupDir, nomeBackup);
 
@@ -40,26 +41,21 @@ function fazerBackupDiario() {
   });
 }
 
-// Agendamento fixo para 03:00 da manhã
+// Agendamento
 function agendarBackupDiarioFixo() {
   const agora = new Date();
   const proximaExecucao = new Date();
+  proximaExecucao.setHours(3, 0, 0, 0);
 
-  proximaExecucao.setHours(3, 0, 0, 0); // 03:00 da manhã
-
-  // Se já passou das 03:00 hoje, agenda pra amanhã
   if (agora >= proximaExecucao) {
     proximaExecucao.setDate(proximaExecucao.getDate() + 1);
   }
 
   const tempoAteProximaExecucao = proximaExecucao - agora;
-
   console.log(`⏰ Próximo backup agendado para: ${proximaExecucao.toLocaleString('pt-BR')}`);
 
   setTimeout(() => {
     fazerBackupDiario();
-
-    // Depois do primeiro, agenda a cada 24h
     setInterval(fazerBackupDiario, 1000 * 60 * 60 * 24);
   }, tempoAteProximaExecucao);
 }
@@ -109,6 +105,7 @@ db.serialize(() => {
     numeracao TEXT,
     condicoes_pagamento TEXT,
     status TEXT DEFAULT 'Em andamento',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY(cliente_id) REFERENCES clientes(id)
   )`);
 
@@ -127,7 +124,7 @@ db.serialize(() => {
     ordem_servico_id INTEGER,
     tipo TEXT,
     descricao TEXT,
-    c TEXT,
+    destinatario TEXT,
     valor REAL,
     data TEXT DEFAULT (date('now')),
     FOREIGN KEY(ordem_servico_id) REFERENCES ordens_servico(id)
@@ -156,4 +153,4 @@ db.serialize(() => {
   agendarBackupDiarioFixo();
 });
 
-module.exports = db;
+module.exports = db

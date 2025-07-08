@@ -1,6 +1,10 @@
 console.log("✅ Preload.js carregado");
 
+const fs = require('fs');
+const path = require('path');
 const { contextBridge, ipcRenderer } = require('electron');
+
+const appPath = process.resourcesPath;
 
 contextBridge.exposeInMainWorld('api', {
   // Clientes
@@ -32,4 +36,13 @@ contextBridge.exposeInMainWorld('api', {
   atualizarOrcamento: (dados) => ipcRenderer.invoke('atualizar-orcamento', dados),
   excluirOrcamento: (id) => ipcRenderer.invoke('excluir-orcamento', id),
   imprimirOrcamento: (id) => ipcRenderer.invoke('imprimir-orcamento', id),
+
+  readFileBase64: (filePath) => fs.readFileSync(filePath, { encoding: 'base64' }),
+  join: (...args) => path.join(...args),
+  appPath: appPath
+
+});
+
+contextBridge.exposeInMainWorld('pathInfo', {
+  dirname: __dirname
 });
