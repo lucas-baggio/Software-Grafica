@@ -3,25 +3,20 @@ const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
 
-// Verifica ambiente
 const isDev = process.env.NODE_ENV === 'development';
 
-// Caminho do banco
 const dbPath = isDev
   ? path.join(__dirname, '..', 'grafica.db')
   : path.join(process.resourcesPath, 'grafica.db');
 
-// Caminho da pasta segura de backup (fora do asar)
 const backupDir = isDev
   ? path.join(__dirname, '..', 'backups')
   : path.join(app.getPath('userData'), 'backups');
 
-// Cria a pasta se não existir
 if (!fs.existsSync(backupDir)) {
   fs.mkdirSync(backupDir, { recursive: true });
 }
 
-// Função de backup
 function fazerBackupDiario() {
   const dataHoje = new Date().toISOString().split('T')[0];
   const nomeBackup = `grafica_${dataHoje}.db`;
@@ -41,7 +36,6 @@ function fazerBackupDiario() {
   });
 }
 
-// Agendamento
 function agendarBackupDiarioFixo() {
   const agora = new Date();
   const proximaExecucao = new Date();
@@ -60,7 +54,6 @@ function agendarBackupDiarioFixo() {
   }, tempoAteProximaExecucao);
 }
 
-// Conexão com o banco
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('❌ Erro ao abrir o banco de dados:', err.message);
@@ -69,7 +62,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Criação das tabelas
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS clientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

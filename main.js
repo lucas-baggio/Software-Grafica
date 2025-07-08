@@ -4,8 +4,6 @@ const fs = require('fs');
 
 const db = require('./db/db');
 
-
-
 Menu.setApplicationMenu(null);
 
 function createWindow() {
@@ -16,7 +14,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false, // importante para usar fs/path
+      sandbox: false, 
       additionalArguments: [`--appPath=${__dirname}`]
     }
   });
@@ -428,7 +426,7 @@ ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20, cliente
 
     if (data) {
       where.push(`DATE(o.data) = ?`);
-      params.push(data); // esperado: 'YYYY-MM-DD'
+      params.push(data);
     }
 
     const whereSQL = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';

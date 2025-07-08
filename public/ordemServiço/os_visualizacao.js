@@ -145,13 +145,6 @@
         }
 
         let yLinha = yTabela + altura * (linhasNecessarias + 1);
-        //   doc.setFont("courier", "bold");
-        //   doc.rect(colX[2], yLinha, colW[1], altura);
-        //   doc.text("DESCONTO R$", colX[2] + 2, yLinha + 5);
-        //   doc.setFont("courier", "normal");
-        //   doc.text(formatarValor(desconto), colX[3] + 2, yLinha + 5);
-
-        //   yLinha += altura;
         doc.setFont("courier", "bold");
         doc.rect(colX[2], yLinha, colW[2] + colW[3], altura);
         doc.text("TOTAL R$", colX[2] + 2, yLinha + 5);

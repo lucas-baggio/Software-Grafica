@@ -164,7 +164,6 @@
         const entrada = {
           "ordem_servico_id": parseInt(res.id, 10),
           "tipo": "Entrada",
-          // "c": "",
           "descricao": "",
           "valor": somaFinal,
           "data": hoje
@@ -179,7 +178,6 @@
         window.osEditId = null;
         localStorage.removeItem('osEditId');
 
-        // ✅ Resetar formulário
         formOS.reset();
         itensContainer.innerHTML = '';
         if (tomSelectCliente) tomSelectCliente.clear();

@@ -31,7 +31,7 @@
       return;
     }
 
-    clientes = dados.clientes; // Armazena só o array de clientes
+    clientes = dados.clientes;
 
     dados.clientes.forEach(cliente => {
       const option = document.createElement('option');

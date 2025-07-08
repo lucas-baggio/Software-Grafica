@@ -63,7 +63,7 @@
     const filtros = {
       pagina: paginaAtual,
       limite: porPagina,
-      ...filtrosAtuais // ← aplica os filtros definidos
+      ...filtrosAtuais
     };
 
     const { ok, orcamentos: dados, total } = await window.api.buscarOrcamentos(filtros);

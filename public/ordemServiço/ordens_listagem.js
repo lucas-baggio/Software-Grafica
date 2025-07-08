@@ -66,7 +66,7 @@
 
     paginacao.innerHTML = '';
 
-    const maxBotoes = 5; // Quantos botões mostrar ao redor da página atual
+    const maxBotoes = 5;
     const mostrarEllipsis = totalPaginas > maxBotoes + 2;
 
     const criarBotao = (i) => {
@@ -81,34 +81,28 @@
     };
 
     if (mostrarEllipsis) {
-      // Sempre mostra o botão da página 1
       criarBotao(1);
 
-      // Mostra "..." se necessário antes da página atual
       if (paginaAtual > 3) {
         const span = document.createElement('span');
         span.textContent = '...';
         paginacao.appendChild(span);
       }
 
-      // Botões centrais
       const start = Math.max(2, paginaAtual - 1);
       const end = Math.min(totalPaginas - 1, paginaAtual + 1);
       for (let i = start; i <= end; i++) {
         criarBotao(i);
       }
 
-      // Mostra "..." depois
       if (paginaAtual < totalPaginas - 2) {
         const span = document.createElement('span');
         span.textContent = '...';
         paginacao.appendChild(span);
       }
 
-      // Última página
       criarBotao(totalPaginas);
     } else {
-      // Paginação simples se poucas páginas
       for (let i = 1; i <= totalPaginas; i++) {
         criarBotao(i);
       }

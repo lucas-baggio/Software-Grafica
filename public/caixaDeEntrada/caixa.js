@@ -99,8 +99,8 @@
 
         valor = (parseInt(valor) / 100).toFixed(2);
         input.value = valor
-          .replace('.', ',')               // separador decimal
-          .replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // milhar
+          .replace('.', ',')               
+          .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       });
     },
     showCancelButton: true,
