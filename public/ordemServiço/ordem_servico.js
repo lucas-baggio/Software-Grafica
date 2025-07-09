@@ -160,35 +160,64 @@
         });
 
         const hoje = new Date().toISOString().split('T')[0];
+        console.log(window.editandoOS)
 
-        const entrada = {
-          "ordem_servico_id": parseInt(res.id, 10),
-          "tipo": "Entrada",
-          "descricao": "",
-          "valor": somaFinal,
-          "data": hoje
-        }
+        if (window.editandoOS) {
+          console.log(osId);
+          
 
-        console.log(entrada);
+          const caixa = window.api.buscarCaixaPorOs(osId);
+          caixa.then(lancamentos => {
+            const entradaExistente = lancamentos.find(l => l.tipo === "Entrada");
+
+            if (!entradaExistente) {
+              console.warn("Nenhuma entrada existente encontrada para essa OS.");
+              return;
+            }
+
+            const entradaAtualizada = {
+              id: entradaExistente.id,
+              ordem_servico_id: parseInt(osId, 10),
+              tipo: "Entrada",
+              descricao: entradaExistente.descricao || "",
+              destinatario: entradaExistente.destinatario || "",
+              valor: somaFinal,
+              data: hoje
+            };
+
+            console.log(entradaAtualizada);
+            window.api.atualizarCaixa(entradaAtualizada);
+          });
+  } else {
+    const entrada = {
+      "ordem_servico_id": parseInt(res.id, 10),
+      "tipo": "Entrada",
+      "descricao": "",
+      "valor": somaFinal,
+      "data": hoje
+    }
+
+          console.log(entrada);
 
 
-        window.api.salvarCaixa(entrada);
+    window.api.salvarCaixa(entrada);
+  }
 
         window.editandoOS = false;
-        window.osEditId = null;
-        localStorage.removeItem('osEditId');
+  window.osEditId = null;
+  localStorage.removeItem('osEditId');
 
-        formOS.reset();
-        itensContainer.innerHTML = '';
-        if (tomSelectCliente) tomSelectCliente.clear();
-        clienteIdParaSelecionar = null;
-      } else {
-        Swal.fire({
-          title: 'Erro!',
-          text: 'Não foi possível salvar a Ordem de Serviço.',
-          icon: 'error'
-        });
-      }
+  formOS.reset();
+  itensContainer.innerHTML = '';
+  if (tomSelectCliente) tomSelectCliente.clear();
+  clienteIdParaSelecionar = null;
+} else {
+  Swal.fire({
+    title: 'Erro!',
+    text: 'Não foi possível salvar a Ordem de Serviço.',
+    icon: 'error'
+  });
+}
     });
   });
-})();
+}) ();

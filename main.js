@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const db = require('./db/db');
 
-Menu.setApplicationMenu(null);
+// Menu.setApplicationMenu(null);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -329,6 +329,69 @@ ipcMain.handle('salvar-caixa', async (_, lancamento) => {
         resolve({ ok: false });
       } else {
         resolve({ ok: true, id: this.lastID });
+      }
+    });
+  });
+});
+
+ipcMain.handle('buscar-caixa-por-os', async (_, ordemServicoId) => {
+  return new Promise((resolve) => {
+    const query = `
+      SELECT 
+        id,
+        ordem_servico_id,
+        tipo,
+        descricao,
+        destinatario,
+        valor,
+        data
+      FROM caixa
+      WHERE ordem_servico_id = ?
+      ORDER BY date(data) DESC, id DESC
+    `;
+
+    db.all(query, [ordemServicoId], (err, rows) => {
+      if (err) {
+        console.error('Erro ao buscar lançamentos do caixa por OS:', err);
+        resolve([]);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+});
+
+
+ipcMain.handle('atualizar-caixa', async (_, lancamento) => {
+  return new Promise((resolve) => {
+    const query = `
+      UPDATE caixa
+      SET 
+        ordem_servico_id = ?,
+        tipo = ?,
+        descricao = ?,
+        destinatario = ?,
+        valor = ?,
+        data = ?
+      WHERE id = ?
+    `;
+
+    const params = [
+      lancamento.ordem_servico_id,
+      lancamento.tipo,
+      lancamento.descricao,
+      lancamento.destinatario,
+      lancamento.valor,
+      lancamento.data || new Date().toISOString().split('T')[0],
+      lancamento.id
+    ];
+
+    db.run(query, params, function (err) {
+      if (err) {
+        console.error('Erro ao atualizar no caixa:', err);
+        resolve({ ok: false });
+      } else {
+        resolve({ ok: true, changes: this.changes });
       }
     });
   });

@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('api', {
 
   // Caixa
   salvarCaixa: (dados) => ipcRenderer.invoke('salvar-caixa', dados),
+  atualizarCaixa: (dados) => ipcRenderer.invoke('atualizar-caixa', dados),
+  buscarCaixaPorOs: (id) => ipcRenderer.invoke('buscar-caixa-por-os', id),
   buscarCaixa: (params) => ipcRenderer.invoke('buscar-caixa', params),
   deletarCaixa: (id) => ipcRenderer.invoke('excluir-caixa', id),
 
