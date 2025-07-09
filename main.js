@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const db = require('./db/db');
 
-// Menu.setApplicationMenu(null);
+Menu.setApplicationMenu(null);
 
 function createWindow() {
   const win = new BrowserWindow({

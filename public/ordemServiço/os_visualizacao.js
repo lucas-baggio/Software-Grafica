@@ -79,7 +79,7 @@
             ["Endereço:", cliente.endereco || "---"],
             ["Cidade:", cliente.cidade || "---"],
             ["Fone:", cliente.telefone || "---"],
-            ["I.E.:", cliente.ie || "---"],
+            ["I.E.:", cliente.inscricao_estadual || "---"],
             ["CNPJ/CPF:", cliente.cnpj || "---"],
             ["INSC. MUN.:", cliente.inscricao_estadual || "---"]
         ];
