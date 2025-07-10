@@ -219,9 +219,16 @@
     doc.setFillColor(255, 204, 0);
     doc.rect(0, 0, 10, 297, 'F');
 
+    console.log(window.api.appPath);
+    
+
     const logoPath = window.api.join(window.api.appPath, 'logo.png');
     const logoBase64 = window.api.readFileBase64(logoPath);
     const logoDataURL = `data:image/png;base64,${logoBase64}`;
+    const whatsappPath = window.api.join(window.api.appPath, 'whatsapp.png');
+    const whatsappBase64 = window.api.readFileBase64(whatsappPath);
+    const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
+    console.log(whatsappPath)
     doc.addImage(logoDataURL, 'PNG', 20, 10, 45, 30);
 
     doc.setFontSize(10);
@@ -231,7 +238,8 @@
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(150, 0, 0);
     doc.text('CNPJ: 09.523.624/0001-29', 100, 15);
-    doc.text('Telefone: (17) 3631-4165 / 99148-7110', 100, 20);
+    doc.text('Telefone: (17) 3631-4165', 100, 20);
+    doc.addImage(whatsappDataURL, 'PNG', 143, 16, 4, 4);
     doc.setTextColor(128, 0, 128);
     doc.text('graficaimage@graficaimage.com.br', 100, 25);
     doc.setTextColor(0);

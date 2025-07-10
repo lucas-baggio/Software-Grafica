@@ -28,6 +28,10 @@
       {
         "from": "logo.png",
         "to": "logo.png"
+      },
+      {
+        "from": "whatsapp.png",
+        "to": "whatsapp.png"
       }
     ],
     "win": {

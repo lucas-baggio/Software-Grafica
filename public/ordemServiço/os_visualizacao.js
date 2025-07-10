@@ -45,6 +45,9 @@
         const logoPath = window.api.join(window.api.appPath, 'logo.png');
         const logoBase64 = window.api.readFileBase64(logoPath);
         const logoDataURL = `data:image/png;base64,${logoBase64}`;
+        const whatsappPath = window.api.join(window.api.appPath, 'whatsapp.png');
+        const whatsappBase64 = window.api.readFileBase64(whatsappPath);
+        const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
         doc.addImage(logoDataURL, 'PNG', margem + 2, margem + 2, 45, 30);
 
         doc.line(margem + 50, yTopoCabecalho, margem + 50, yBaseCabecalho);
@@ -52,6 +55,7 @@
         let xGraf = margem + 65;
         let yGraf = margem + 6;
         doc.text("Telefone: (17) 3631-4165", xGraf, yGraf);
+        doc.addImage(whatsappDataURL, 'PNG', 130, 12, 4, 4);
         doc.text("graficaimage@graficaimage.com.br", xGraf, yGraf += 5);
         doc.text("I.E.: 614.104.129.110", xGraf, yGraf += 5);
         doc.text("CNPJ: 09.521.624/0001-29", xGraf, yGraf += 5);
