@@ -25,7 +25,7 @@
     orcamentoId = window.orcamentoVisualizacaoId;
   }
 
-  window.api.buscarClientes({ pagina: 1, limite: 100 }).then(dados => {
+  window.api.buscarClientes({ pagina: 1, limite: 1000 }).then(dados => {
     if (!dados.ok) {
       console.error("Erro ao buscar clientes");
       return;
@@ -71,7 +71,7 @@
     tr.innerHTML = `
       <td><input type="number" class="quantidade" value="${item.quantidade || ''}" placeholder="0" style="width: 60px;" ${modoVisualizacao ? 'readonly' : ''} /></td>
       <td><input type="text" class="descricao" value="${item.descricao || ''}" placeholder="Descrição do item" style="width: 100%;" ${modoVisualizacao ? 'readonly' : ''} /></td>
-      <td><input type="number" class="valor_unitario" value="${item.valor_unitario || ''}" step="0.01" placeholder="0,00" style="width: 100px;" ${modoVisualizacao ? 'readonly' : ''} /></td>
+      <td><input type="text" class="valor_unitario" value="${item.valor_unitario || ''}" step="0.01" placeholder="0,00" style="width: 100px;" ${modoVisualizacao ? 'readonly' : ''} /></td>
       <td class="valor_total" style="min-width: 90px;">R$ 0,00</td>
       <td>
         ${!modoVisualizacao ? `
@@ -84,17 +84,40 @@
 
     const qtdInput = tr.querySelector('.quantidade');
     const valorInput = tr.querySelector('.valor_unitario');
+
+    valorInput.addEventListener('input', function () {
+      let valor = this.value;
+
+      valor = valor.replace(/[^\d,]/g, '');
+
+      const indexVirgula = valor.indexOf(',');
+      if (indexVirgula !== -1) {
+        const parteInteira = valor.slice(0, indexVirgula);
+        const parteDecimal = valor.slice(indexVirgula + 1).slice(0, 4);  
+        this.value = `${parteInteira},${parteDecimal}`;
+      } else {
+        this.value = valor;
+      }
+
+      atualizarTotal();
+    });
+
+
     const totalDisplay = tr.querySelector('.valor_total');
 
     function atualizarTotal() {
       const qtd = parseInt(qtdInput.value) || 0;
-      const unit = parseFloat(valorInput.value) || 0;
+      const unit = parseFloat(valorInput.value.replace(',', '.')) || 0;
       const total = qtd * unit;
+
       totalDisplay.textContent = total.toLocaleString('pt-BR', {
         style: 'currency',
-        currency: 'BRL'
+        currency: 'BRL',
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4
       });
     }
+
 
     qtdInput.addEventListener('input', atualizarTotal);
     valorInput.addEventListener('input', atualizarTotal);
@@ -193,70 +216,82 @@
         form.reset();
         itensContainer.innerHTML = '';
         tomSelectCliente.clear();
+
         window.orcamentoEditId = null;
         window.orcamentoVisualizacaoId = null;
         modoEdicao = false;
         modoVisualizacao = false;
         orcamentoId = null;
       }
-      window.orcamentoEditId = null;
-      window.orcamentoVisualizacaoId = null;
-      modoEdicao = false;
-      modoVisualizacao = false;
-      orcamentoId = null;
-      form.reset();
-      itensContainer.innerHTML = '';
-      tomSelectCliente.clear();
     } else {
       Swal.fire('Erro', 'Não foi possível salvar o orçamento.', 'error');
     }
   });
 
-  document.getElementById('btnImprimir').addEventListener('click', () => {
+  document.getElementById('btnImprimir').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFillColor(255, 204, 0);
-    doc.rect(0, 0, 10, 297, 'F');
 
-    console.log(window.api.appPath);
-    
+    doc.setFillColor(255, 204, 0);
+    doc.rect(0, 0, 5, 297, 'F');
+    doc.setFillColor(0);
+    doc.rect(5, 0, 2, 297, 'F');
+
+    doc.setFillColor(255, 204, 0);
+    doc.rect(200, 0, 3, 50, 'F'); 
+
 
     const logoPath = window.api.join(window.api.appPath, 'logo.png');
     const logoBase64 = window.api.readFileBase64(logoPath);
     const logoDataURL = `data:image/png;base64,${logoBase64}`;
+    doc.addImage(logoDataURL, 'PNG', 20, 10, 60, 45);
+
     const whatsappPath = window.api.join(window.api.appPath, 'whatsapp.png');
     const whatsappBase64 = window.api.readFileBase64(whatsappPath);
     const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
-    console.log(whatsappPath)
-    doc.addImage(logoDataURL, 'PNG', 20, 10, 45, 30);
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
+    const emailPath = window.api.join(window.api.appPath, 'email.png');
+    const emailBase64 = window.api.readFileBase64(emailPath);
+    const emailDataURL = `data:image/png;base64,${emailBase64}`;
+
+    const pingPath = window.api.join(window.api.appPath, 'ping.png');
+    const pingBase64 = window.api.readFileBase64(pingPath);
+    const pingDataURL = `data:image/png;base64,${pingBase64}`
+
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12);
     doc.setTextColor(0);
-    doc.text('Curtolo & Curtolo Gráfica Ltda', 100, 10);
+    doc.text('Curtolo & Curtolo Gráfica Ltda', 190, 22, { align: 'right' });
+
+    doc.setTextColor(220, 0, 0);
+    doc.text('CNPJ: 09.521.624/0001-29', 190, 27, { align: 'right' });
+    doc.text('Inscr. Est.: 614.104.129.110', 190, 32, { align: 'right' });
+
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150, 0, 0);
-    doc.text('CNPJ: 09.523.624/0001-29', 100, 15);
-    doc.text('Telefone: (17) 3631-4165', 100, 20);
-    doc.addImage(whatsappDataURL, 'PNG', 143, 16, 4, 4);
-    doc.setTextColor(128, 0, 128);
-    doc.text('graficaimage@graficaimage.com.br', 100, 25);
     doc.setTextColor(0);
-    doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 100, 30);
+    doc.addImage(whatsappDataURL, 'PNG', 157, 36, 3, 3);
+    doc.text('(17) 3631-4165', 190, 39, { align: 'right' });
 
-    const clienteNome = document.getElementById('clienteSelect')
-      ?.selectedOptions[0]?.textContent?.trim() || 'CLIENTE';
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
+    doc.addImage(emailDataURL, 'PNG', 120, 41, 3, 3);
+    doc.text('graficaimage@graficaimage.com.br', 190, 44, { align: 'right' });
+
+    doc.addImage(pingDataURL, 'PNG', 102, 46, 3, 3);
+    doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 190, 49, { align: 'right' });
+
+
+    const clienteNome = document.getElementById('clienteSelect')?.selectedOptions[0]?.textContent?.trim().toUpperCase() || 'CLIENTE';
+
+    doc.setFontSize(12);
     doc.setTextColor(0);
-    doc.text(`${clienteNome.toUpperCase()}`, 105, 45, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text(clienteNome, 100, 69, { align: 'center' });
+
 
     const itens = Array.from(document.querySelectorAll('.item')).map((itemEl, idx) => {
       const qtdInput = itemEl.querySelector('.quantidade');
       const descInput = itemEl.querySelector('.descricao');
       const valorInput = itemEl.querySelector('.valor_unitario');
-
       if (!qtdInput || !descInput || !valorInput) return null;
 
       const qtd = qtdInput.value;
@@ -274,7 +309,7 @@
     }).filter(item => item !== null);
 
     doc.autoTable({
-      startY: 55,
+      startY: 75, 
       head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
       body: itens,
       theme: 'grid',
@@ -283,19 +318,18 @@
       columnStyles: {
         0: { halign: 'center', cellWidth: 12 },
         1: { halign: 'center', cellWidth: 20 },
-        2: { cellWidth: 85 },
-        3: { halign: 'right', cellWidth: 30 },
-        4: { halign: 'right', cellWidth: 30 }
-      }
+        2: { cellWidth: 60 },
+        3: { halign: 'right', cellWidth: 36 },
+        4: { halign: 'right', cellWidth: 36 }
+      },
+      tableWidth: 193, 
+      margin: { left: 21 } 
     });
-
-    const finalY = doc.lastAutoTable.finalY;
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text('Documento gerado automaticamente pelo Sistema da Gráfica', 105, finalY + 15, { align: 'center' });
 
     const nomeArquivo = `orcamento_${clienteNome.replace(/\s+/g, '_').toLowerCase()}.pdf`;
     doc.save(nomeArquivo);
   });
+
+
 
 })();

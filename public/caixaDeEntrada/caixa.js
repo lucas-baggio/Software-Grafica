@@ -13,14 +13,25 @@
   let ultimosDados = [];
 
   function formatarData(dataISO) {
-    const [ano, mes, dia] = dataISO.split('-');
+    if (!dataISO) return '';
+
+    const data = new Date(dataISO);
+    if (isNaN(data)) return '';
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = data.getFullYear();
+
     return `${dia}/${mes}/${ano}`;
   }
 
-  function formatarValor(valor) {
+
+  function formatarMoeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4
     }).format(valor);
   }
 
@@ -49,7 +60,7 @@
         <td>${ent.nome_exibicao || '-'}</td>
         <td>${ent.tipo}</td>
         <td>${formatarData(ent.data)}</td>
-        <td>${formatarValor(ent.valor)}</td>
+        <td>${formatarMoeda(ent.valor)}</td>
         <td>
           <button onclick="excluir(${ent.id})"><span class="material-icons">delete</span></button>
         </td>
@@ -57,9 +68,9 @@
       tabelaEntradas.appendChild(tr);
     });
 
-    if (cardEntrada) cardEntrada.textContent = formatarValor(totalEntrada);
-    if (cardSaida) cardSaida.textContent = formatarValor(totalSaida);
-    if (cardSaldo) cardSaldo.textContent = formatarValor(totalEntrada - totalSaida);
+    if (cardEntrada) cardEntrada.textContent = formatarMoeda(totalEntrada);
+    if (cardSaida) cardSaida.textContent = formatarMoeda(totalSaida);
+    if (cardSaldo) cardSaldo.textContent = formatarMoeda(totalEntrada - totalSaida);
 
     renderizarPaginacao();
   }
@@ -79,57 +90,61 @@
   }
 
   btnNovaSaida.addEventListener('click', () => {
-  Swal.fire({
-    title: 'Nova Saída',
-    html: `
+    Swal.fire({
+      title: 'Nova Saída',
+      html: `
       <input id="resp" class="swal2-input" placeholder="Responsável">
       <input id="desc" class="swal2-input" placeholder="Descrição">
       <input id="valor" type="text" class="swal2-input" placeholder="Valor">
     `,
-    didOpen: () => {
-      const input = document.getElementById('valor');
+      didOpen: () => {
+        const input = document.getElementById('valor');
 
-      input.addEventListener('input', () => {
-        let valor = input.value.replace(/\D/g, '');
+        input.addEventListener('input', function () {
+          let valor = this.value.replace(/[^\d,]/g, '');
 
-        if (valor === '') {
-          input.value = '';
-          return;
+          const partes = valor.split(',');
+          const parteInteira = partes[0];
+          const parteDecimal = partes[1] ? partes[1].slice(0, 4) : '';
+
+          const valorFormatado = parteDecimal ? `${parteInteira},${parteDecimal}` : parteInteira;
+
+          const numero = parseFloat(valorFormatado.replace(',', '.'));
+
+          if (!isNaN(numero)) {
+            this.value = numero.toFixed(4).replace('.', ',');
+          } else {
+            this.value = valorFormatado; 
+          }
+        });
+
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Salvar',
+      preConfirm: () => {
+        const descricao = document.getElementById('desc').value;
+        const destinatario = document.getElementById('resp').value;
+        const valorStr = document.getElementById('valor').value;
+
+        const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+        const tipo = "Saída";
+
+        if (!descricao || !destinatario || isNaN(valor) || valor <= 0) {
+          Swal.showValidationMessage('Preencha todos os campos corretamente');
+          return false;
         }
 
-        valor = (parseInt(valor) / 100).toFixed(2);
-        input.value = valor
-          .replace('.', ',')               
-          .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      });
-    },
-    showCancelButton: true,
-    confirmButtonText: 'Salvar',
-    preConfirm: () => {
-      const descricao = document.getElementById('desc').value;
-      const destinatario = document.getElementById('resp').value;
-      const valorStr = document.getElementById('valor').value;
-
-      const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
-      const tipo = "Saída";
-
-      if (!descricao || !destinatario || isNaN(valor) || valor <= 0) {
-        Swal.showValidationMessage('Preencha todos os campos corretamente');
-        return false;
+        return { descricao, destinatario, valor, tipo };
       }
-
-      return { descricao, destinatario, valor, tipo };
-    }
-  }).then(result => {
-    if (result.isConfirmed) {
-      window.api.salvarCaixa(result.value).then(res => {
-        if (res.ok) carregarEntradas();
-        else Swal.fire('Erro', 'Não foi possível salvar a saída.', 'error');
-      });
-    }
+    }).then(result => {
+      if (result.isConfirmed) {
+        window.api.salvarCaixa(result.value).then(res => {
+          if (res.ok) carregarEntradas();
+          else Swal.fire('Erro', 'Não foi possível salvar a saída.', 'error');
+        });
+      }
+    });
   });
-});
-
 
   window.excluir = function (id) {
     Swal.fire({

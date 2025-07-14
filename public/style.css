@@ -471,6 +471,21 @@ td.status {
   border-radius: 4px;
 }
 
+td.status.recebido {
+  color: #28a745; 
+  font-weight: bold;
+}
+
+td.status.pago {
+  color: #28a745; 
+  font-weight: bold;
+}
+
+td.status.pendente {
+  color: #f0ad4e; 
+  font-weight: bold;
+}
+
 .listagem_ordem {overflow-y: auto; max-height: 100vh;}
 
 /* Caixa */

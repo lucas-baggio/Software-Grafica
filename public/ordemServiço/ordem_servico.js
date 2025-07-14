@@ -4,12 +4,16 @@
   const formOS = document.getElementById('formOS');
   const clienteSelect = document.getElementById('clienteSelect');
   const itensContainer = document.getElementById('itensContainer');
-  const osId = window.osEditId;
+
+  const osId = localStorage.getItem('osEditId');
+  const editando = !!osId;
+  window.editandoOS = editando;
+  window.osEditId = osId;
 
   let tomSelectCliente = null;
   let clienteIdParaSelecionar = null;
 
-  window.api.buscarClientes({ pagina: 1, limite: 100 }).then(resposta => {
+  window.api.buscarClientes({ pagina: 1, limite: 1000 }).then(resposta => {
     if (!resposta.ok) {
       console.error("Erro ao buscar clientes");
       return;
@@ -35,8 +39,7 @@
     }
   });
 
-
-  if (osId) {
+  if (editando) {
     window.api.buscarOSDetalhada(parseInt(osId)).then(res => {
       if (!res.ok) {
         alert('Erro ao buscar OS para edição');
@@ -50,8 +53,9 @@
         tomSelectCliente.setValue(clienteIdParaSelecionar);
       }
 
-      formOS.data_entrada.value = os.data_entrada;
-      formOS.data_entrega.value = os.data_entrega;
+      formOS.data_entrada.value = os.data_entrada ? new Date(os.data_entrada).toISOString().split('T')[0] : '';
+      formOS.data_entrega.value = os.data_entrega ? new Date(os.data_entrega).toISOString().split('T')[0] : '';
+
       formOS.prova.value = os.mostrar_prova ? "Sim" : "Não";
       formOS.alteracao.value = os.alteracao ? "sim" : "nao";
       formOS.cores.value = os.cores;
@@ -81,8 +85,6 @@
         ultimo.querySelector('.descricao').value = item.descricao;
         ultimo.querySelector('.valor_unitario').value = item.valor_unitario;
       });
-
-      window.editandoOS = true;
     });
   }
 
@@ -90,23 +92,42 @@
     const div = document.createElement('div');
     div.className = 'item row';
     div.innerHTML = `
-      <div class="col-2">
-        <input type="number" placeholder="Quantidade" class="quantidade" required>
-      </div>
-      <div class="col-6">
-        <input type="text" placeholder="Descrição" class="descricao" required>
-      </div>
-      <div class="col-3">
-        <input type="number" step="0.01" placeholder="Valor Unitário" class="valor_unitario" required>
-      </div>
-      <div class="col-1 d-flex align-items-center">
-        <button type="button" onclick="this.closest('.item').remove()">
-          <span class="material-icons">delete</span>
-        </button>
-      </div>
-    `;
+    <div class="col-2">
+      <input type="number" placeholder="Quantidade" class="quantidade" required>
+    </div>
+    <div class="col-6">
+      <input type="text" placeholder="Descrição" class="descricao" required>
+    </div>
+    <div class="col-3">
+      <input type="text" placeholder="Valor Unitário" class="valor_unitario" required>
+    </div>
+    <div class="col-1 d-flex align-items-center">
+      <button type="button" onclick="this.closest('.item').remove()">
+        <span class="material-icons">delete</span>
+      </button>
+    </div>
+  `;
+
+    const inputValor = div.querySelector('.valor_unitario');
+    inputValor.addEventListener('input', function () {
+      let valor = this.value.replace(/[^\d,]/g, '').replace(',', '.');
+
+      const partes = valor.split('.');
+      if (partes.length > 2) {
+        valor = partes[0] + '.' + partes.slice(1).join('');
+      }
+
+      if (valor !== '') {
+        const numero = parseFloat(valor);
+        if (!isNaN(numero)) {
+          this.value = numero.toFixed(4).replace('.', ',');
+        }
+      }
+    });
+
     itensContainer.appendChild(div);
   }
+
   window.adicionarItem = adicionarItem;
 
   function getViasSelecionadas() {
@@ -140,84 +161,67 @@
     });
 
     const somaFinal = itens.reduce((total, item) => total + item.valor_total, 0);
+    const hoje = new Date().toISOString().split('T')[0];
 
-    console.log(os);
-
-
-    const envio = window.editandoOS
+    const envio = editando
       ? window.api.atualizarOS({ id: osId, os, itens })
       : window.api.salvarOS({ os, itens });
 
     envio.then(res => {
-
       if (res.ok) {
         Swal.fire({
           title: 'Sucesso!',
-          text: window.editandoOS ? 'Ordem de Serviço atualizada!' : 'Ordem de Serviço salva com sucesso!',
+          text: editando ? 'Ordem de Serviço atualizada!' : 'Ordem de Serviço salva com sucesso!',
           icon: 'success',
           timer: 2000,
           showConfirmButton: false
         });
 
-        const hoje = new Date().toISOString().split('T')[0];
-        console.log(window.editandoOS)
+        if (editando) {
+          window.api.buscarCaixaPorOs(osId).then(lancamentos => {
+            const entrada = lancamentos.find(l => l.tipo === "Entrada");
 
-        if (window.editandoOS) {
-          console.log(osId);
-          
-
-          const caixa = window.api.buscarCaixaPorOs(osId);
-          caixa.then(lancamentos => {
-            const entradaExistente = lancamentos.find(l => l.tipo === "Entrada");
-
-            if (!entradaExistente) {
-              console.warn("Nenhuma entrada existente encontrada para essa OS.");
-              return;
-            }
+            if (!entrada) return;
 
             const entradaAtualizada = {
-              id: entradaExistente.id,
+              id: entrada.id,
               ordem_servico_id: parseInt(osId, 10),
               tipo: "Entrada",
-              descricao: entradaExistente.descricao || "",
-              destinatario: entradaExistente.destinatario || "",
+              descricao: entrada.descricao || "",
+              destinatario: entrada.destinatario || "",
               valor: somaFinal,
               data: hoje
             };
 
-            console.log(entradaAtualizada);
             window.api.atualizarCaixa(entradaAtualizada);
           });
-  } else {
-    const entrada = {
-      "ordem_servico_id": parseInt(res.id, 10),
-      "tipo": "Entrada",
-      "descricao": "",
-      "valor": somaFinal,
-      "data": hoje
-    }
+        } else {
+          const entrada = {
+            ordem_servico_id: parseInt(res.id, 10),
+            tipo: "Entrada",
+            descricao: "",
+            valor: somaFinal,
+            data: hoje
+          };
 
-          console.log(entrada);
-
-
-    window.api.salvarCaixa(entrada);
-  }
+          window.api.salvarCaixa(entrada);
+        }
 
         window.editandoOS = false;
-  window.osEditId = null;
-  localStorage.removeItem('osEditId');
+        window.osEditId = null;
+        localStorage.removeItem('osEditId');
 
-  formOS.reset();
-  itensContainer.innerHTML = '';
-  if (tomSelectCliente) tomSelectCliente.clear();
-  clienteIdParaSelecionar = null;
-} else {
-  Swal.fire({
-    title: 'Erro!',
-    text: 'Não foi possível salvar a Ordem de Serviço.',
-    icon: 'error'
-  });
-}
+        formOS.reset();
+        itensContainer.innerHTML = '';
+        if (tomSelectCliente) tomSelectCliente.clear();
+        clienteIdParaSelecionar = null;
+      } else {
+        Swal.fire({
+          title: 'Erro!',
+          text: 'Não foi possível salvar a Ordem de Serviço.',
+          icon: 'error'
+        });
+      }
     });
   });
-}) ();
+})();

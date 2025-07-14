@@ -1,10 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { conectarDB, getPool } = require('./db/db');
 
-const db = require('./db/db');
-
-// Menu.setApplicationMenu(null);
+Menu.setApplicationMenu(null);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -14,7 +13,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false, 
+      sandbox: false,
       additionalArguments: [`--appPath=${__dirname}`]
     }
   });
@@ -22,160 +21,153 @@ function createWindow() {
   win.loadFile('public/layout.html');
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  await conectarDB();
+  createWindow();
+});
 
 ipcMain.handle('salvar-cliente', async (_, dados) => {
-  return new Promise((resolve, reject) => {
-    const query = `INSERT INTO clientes (
-      nome_fantasia, razao_social, endereco, bairro,
-      cidade, uf, telefone, inscricao_estadual, cnpj
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const db = getPool();
 
-    const params = [
-      dados.nome_fantasia,
-      dados.razao_social,
-      dados.endereco,
-      dados.bairro,
-      dados.cidade,
-      dados.uf,
-      dados.telefone,
-      dados.inscricao_estadual,
-      dados.cnpj
-    ];
+  const query = `INSERT INTO clientes (
+    nome_fantasia, razao_social, endereco, bairro,
+    cidade, uf, telefone, inscricao_estadual, cnpj
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.run(query, params, function (err) {
-      if (err) {
-        console.error(err);
-        resolve({ ok: false });
-      } else {
-        resolve({ ok: true, id: this.lastID });
-      }
-    });
-  });
+  const [result] = await db.execute(query, [
+    dados.nome_fantasia,
+    dados.razao_social,
+    dados.endereco,
+    dados.bairro,
+    dados.cidade,
+    dados.uf,
+    dados.telefone,
+    dados.inscricao_estadual,
+    dados.cnpj
+  ]);
+
+  return { ok: true, id: result.insertId };
 });
 
-ipcMain.handle('buscar-clientes', async (_, { pagina = 1, limite = 20 }) => {
-  return new Promise((resolve) => {
-    const offset = (pagina - 1) * limite;
+ipcMain.handle('buscar-clientes', async (_, params) => {
+  const db = getPool();
 
-    db.all(`SELECT id, nome_fantasia, cnpj, telefone, razao_social FROM clientes LIMIT ? OFFSET ?`, [limite, offset], (err, rows) => {
-      if (err) {
-        console.error(err);
-        resolve({ ok: false, clientes: [], total: 0 });
-      } else {
-        db.get(`SELECT COUNT(*) as total FROM clientes`, (err2, result) => {
-          if (err2) {
-            console.error(err2);
-            resolve({ ok: false, clientes: [], total: 0 });
-          } else {
-            resolve({ ok: true, clientes: rows, total: result.total });
-          }
-        });
-      }
-    });
-  });
+  const pagina = parseInt(params?.pagina ?? '1', 10);
+  const limite = parseInt(params?.limite ?? '20', 10);
+
+  if (!Number.isInteger(pagina) || !Number.isInteger(limite)) {
+    return { ok: false, error: 'Parâmetros inválidos para paginação.' };
+  }
+
+  const offset = (pagina - 1) * limite;
+
+  try {
+    const query = `
+      SELECT id, nome_fantasia, cnpj, telefone, razao_social 
+      FROM clientes 
+      LIMIT ${limite} OFFSET ${offset}
+    `;
+
+    const [clientes] = await db.execute(query);
+    const [[{ total }]] = await db.execute(`SELECT COUNT(*) as total FROM clientes`);
+
+    return { ok: true, clientes, total };
+  } catch (error) {
+    console.error('❌ Erro ao buscar clientes:', error);
+    return { ok: false, error: 'Erro ao buscar clientes' };
+  }
 });
+
 
 
 ipcMain.handle('buscar-cliente-id', async (_, id) => {
-  return new Promise((resolve) => {
-    db.get(`SELECT * FROM clientes WHERE id = ?`, [id], (err, row) => {
-      if (err) {
-        console.error(err);
-        resolve(null);
-      } else {
-        resolve(row);
-      }
-    });
-  });
+  const db = getPool();
+  const [[row]] = await db.execute(`SELECT * FROM clientes WHERE id = ?`, [id]);
+  return row;
 });
 
 ipcMain.handle('atualizar-cliente', async (_, cliente) => {
-  return new Promise((resolve) => {
-    const query = `
-      UPDATE clientes SET
-        nome_fantasia = ?, razao_social = ?, endereco = ?, bairro = ?, cidade = ?, uf = ?,
-        telefone = ?, inscricao_estadual = ?, cnpj = ?
-      WHERE id = ?
-    `;
-    const params = [
-      cliente.nome_fantasia,
-      cliente.razao_social,
-      cliente.endereco,
-      cliente.bairro,
-      cliente.cidade,
-      cliente.uf,
-      cliente.telefone,
-      cliente.inscricao_estadual,
-      cliente.cnpj,
-      cliente.id
-    ];
-
-    db.run(query, params, function (err) {
-      if (err) {
-        console.error(err);
-        resolve({ ok: false });
-      } else {
-        resolve({ ok: true });
-      }
-    });
-  });
+  const db = getPool();
+  const query = `
+    UPDATE clientes SET
+      nome_fantasia = ?, razao_social = ?, endereco = ?, bairro = ?, cidade = ?, uf = ?,
+      telefone = ?, inscricao_estadual = ?, cnpj = ?
+    WHERE id = ?
+  `;
+  await db.execute(query, [
+    cliente.nome_fantasia,
+    cliente.razao_social,
+    cliente.endereco,
+    cliente.bairro,
+    cliente.cidade,
+    cliente.uf,
+    cliente.telefone,
+    cliente.inscricao_estadual,
+    cliente.cnpj,
+    cliente.id
+  ]);
+  return { ok: true };
 });
 
 ipcMain.handle('atualizar-status-os', async (_, { id, status }) => {
-  return new Promise(resolve => {
-    db.run(`UPDATE ordens_servico SET status = ? WHERE id = ?`, [status, id], function (err) {
-      if (err) {
-        console.error(err);
-        return resolve({ ok: false });
-      }
-      resolve({ ok: true });
-    });
-  });
+  const db = getPool();
+  await db.execute(`UPDATE ordens_servico SET status = ? WHERE id = ?`, [status, id]);
+  return { ok: true };
 });
 
-
 ipcMain.handle('salvar-os', async (_, { os, itens }) => {
-  return new Promise((resolve, reject) => {
-    db.run(`INSERT INTO ordens_servico (
-      cliente_id, data_entrada, data_entrega, alteracao, mostrar_prova, cores,
-      sulfite, duplex, couche, adesivo, bond, copiativo, vias, formato,
-      picotar, so_colado, numeracao, condicoes_pagamento
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        os.cliente_id, os.data_entrada, os.data_entrega, os.alteracao, os.mostrar_prova, os.cores,
-        os.sulfite || 0, os.duplex || 0, os.couche || 0, os.adesivo || 0, os.bond || 0, os.copiativo,
-        os.vias, os.formato, os.picotar, os.so_colado, os.numeracao, os.condicoes_pagamento
-      ],
-      function (err) {
-        if (err) {
-          console.error(err);
-          resolve({ ok: false });
-        } else {
-          const ordemId = this.lastID;
+  const db = getPool();
 
-          const stmt = db.prepare(`INSERT INTO itens_ordem (
-          ordem_servico_id, quantidade, descricao, valor_unitario, valor_total
-        ) VALUES (?, ?, ?, ?, ?)`);
+  const insertOS = `INSERT INTO ordens_servico (
+    cliente_id, data_entrada, data_entrega, alteracao, mostrar_prova, cores,
+    sulfite, duplex, couche, adesivo, bond, copiativo, vias, formato,
+    picotar, so_colado, numeracao, condicoes_pagamento
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-          for (const item of itens) {
-            const total = item.quantidade * item.valor_unitario;
-            stmt.run(ordemId, item.quantidade, item.descricao, item.valor_unitario, total);
-          }
+  const [osResult] = await db.execute(insertOS, [
+    os.cliente_id,
+    os.data_entrada,
+    os.data_entrega,
+    os.alteracao,
+    os.mostrar_prova,
+    os.cores,
+    os.sulfite || null,
+    os.duplex || null,
+    os.couche || null,
+    os.adesivo || null,
+    os.bond || null,
+    os.copiativo,
+    os.vias,
+    os.formato,
+    os.picotar || null,
+    os.so_colado || null,
+    os.numeracao || null,
+    os.condicoes_pagamento
+  ]);
 
-          stmt.finalize();
-          resolve({ ok: true, id: ordemId });
-        }
-      });
+  const ordemId = osResult.insertId;
+
+  const insertItem = `INSERT INTO itens_ordem (
+    ordem_servico_id, quantidade, descricao, valor_unitario, valor_total
+  ) VALUES (?, ?, ?, ?, ?)`;
+
+  const promises = itens.map(item => {
+    const total = item.quantidade * item.valor_unitario;
+    return db.execute(insertItem, [ordemId, item.quantidade, item.descricao, item.valor_unitario, total]);
   });
+
+  await Promise.all(promises);
+
+  return { ok: true, id: ordemId };
 });
 
 ipcMain.handle('listar-os', async (_, params) => {
-  const pagina = params?.pagina || 1;
-  const limite = params?.limite || 20;
+  const db = getPool();
+  const pagina = parseInt(params?.pagina || 1);
+  const limite = parseInt(params?.limite || 20);
   const offset = (pagina - 1) * limite;
 
-  return new Promise((resolve) => {
+  try {
     const query = `
       SELECT 
         os.id, 
@@ -192,27 +184,22 @@ ipcMain.handle('listar-os', async (_, params) => {
         os.id, os.data_entrada, os.data_entrega,
         os.status, c.nome_fantasia
       ORDER BY os.id DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${limite} OFFSET ${offset}
     `;
 
-    db.all(query, [limite, offset], (err, rows) => {
-      if (err) {
-        console.error("Erro ao listar OS:", err);
-        resolve({ ok: false, ordens: [], total: 0 });
-      } else {
-        db.get(`SELECT COUNT(*) AS total FROM ordens_servico`, (err2, result) => {
-          const total = result?.total || 0;
-          resolve({ ok: true, ordens: rows, total });
-        });
-      }
-    });
-  });
+    const [ordens] = await db.execute(query);
+    const [[{ total }]] = await db.execute(`SELECT COUNT(*) AS total FROM ordens_servico`);
+
+    return { ok: true, ordens, total };
+  } catch (error) {
+    console.error('❌ Erro ao listar OS:', error);
+    return { ok: false, ordens: [], total: 0 };
+  }
 });
 
 
-ipcMain.handle('imprimir-pagina', async (event) => {
+ipcMain.handle('imprimir-pagina', async () => {
   const win = BrowserWindow.getFocusedWindow();
-
   if (!win) return;
 
   try {
@@ -237,170 +224,153 @@ ipcMain.handle('imprimir-pagina', async (event) => {
 });
 
 ipcMain.handle('atualizar-os', async (_, { id, os, itens }) => {
-  return new Promise((resolve) => {
-    db.run(`UPDATE ordens_servico SET
-      cliente_id = ?, data_entrada = ?, data_entrega = ?, alteracao = ?, mostrar_prova = ?, cores = ?,
-      sulfite = ?, duplex = ?, couche = ?, adesivo = ?, bond = ?, copiativo = ?, vias = ?, formato = ?,
-      picotar = ?, so_colado = ?, numeracao = ?, condicoes_pagamento = ?
-      WHERE id = ?`,
-      [
-        os.cliente_id, os.data_entrada, os.data_entrega, os.alteracao, os.mostrar_prova, os.cores,
-        os.sulfite || 0, os.duplex || 0, os.couche || 0, os.adesivo || 0, os.bond || 0, os.copiativo,
-        os.vias, os.formato, os.picotar, os.so_colado, os.numeracao, os.condicoes_pagamento,
-        id
-      ],
-      function (err) {
-        if (err) return resolve({ ok: false });
+  const db = getPool();
 
-        db.run(`DELETE FROM itens_ordem WHERE ordem_servico_id = ?`, [id], function (err2) {
-          if (err2) return resolve({ ok: false });
+  await db.execute(`
+  UPDATE ordens_servico SET
+    cliente_id = ?, data_entrada = ?, data_entrega = ?, alteracao = ?, mostrar_prova = ?, cores = ?,
+    sulfite = ?, duplex = ?, couche = ?, adesivo = ?, bond = ?, copiativo = ?, vias = ?, formato = ?,
+    picotar = ?, so_colado = ?, numeracao = ?, condicoes_pagamento = ?
+  WHERE id = ?
+`, [
+    os.cliente_id ?? null,
+    os.data_entrada || null,
+    os.data_entrega || null,
+    os.alteracao ?? false,
+    os.mostrar_prova ?? false,
+    os.cores || null,
+    os.sulfite ?? 0,
+    os.duplex ?? 0,
+    os.couche ?? 0,
+    os.adesivo ?? 0,
+    os.bond ?? 0,
+    os.copiativo ?? false,
+    os.vias ?? null,
+    os.formato || null,
+    os.picotar || null,
+    os.so_colado ?? false,
+    os.numeracao || null,
+    os.condicoes_pagamento || null,
+    id
+  ]);
 
-          const stmt = db.prepare(`INSERT INTO itens_ordem (
-            ordem_servico_id, quantidade, descricao, valor_unitario, valor_total
-          ) VALUES (?, ?, ?, ?, ?)`);
+  await db.execute(`DELETE FROM itens_ordem WHERE ordem_servico_id = ?`, [id]);
 
-          for (const item of itens) {
-            const total = item.quantidade * item.valor_unitario;
-            stmt.run(id, item.quantidade, item.descricao, item.valor_unitario, total);
-          }
+  const insertItem = `INSERT INTO itens_ordem (
+    ordem_servico_id, quantidade, descricao, valor_unitario, valor_total
+  ) VALUES (?, ?, ?, ?, ?)`;
 
-          stmt.finalize();
-          resolve({ ok: true });
-        });
-      }
-    );
+  const promises = itens.map(item => {
+    const total = item.quantidade * item.valor_unitario;
+    return db.execute(insertItem, [id, item.quantidade, item.descricao, item.valor_unitario, total]);
   });
-});
 
+  await Promise.all(promises);
+
+  return { ok: true };
+});
 
 ipcMain.handle('buscar-os-detalhada', async (_, id) => {
-  return new Promise((resolve) => {
-    db.get(`
-      SELECT * FROM ordens_servico WHERE id = ?
-    `, [id], (err, os) => {
-      if (err || !os) return resolve({ ok: false });
+  const db = getPool();
 
-      db.get(`SELECT * FROM clientes WHERE id = ?`, [os.cliente_id], (err2, cliente) => {
-        if (err2 || !cliente) return resolve({ ok: false });
+  const [[os]] = await db.execute(`SELECT * FROM ordens_servico WHERE id = ?`, [id]);
+  if (!os) return { ok: false };
 
-        db.all(`SELECT * FROM itens_ordem WHERE ordem_servico_id = ?`, [id], (err3, itens) => {
-          if (err3) return resolve({ ok: false });
+  const [[cliente]] = await db.execute(`SELECT * FROM clientes WHERE id = ?`, [os.cliente_id]);
+  if (!cliente) return { ok: false };
 
-          resolve({ ok: true, os, cliente, itens });
-        });
-      });
-    });
-  });
+  const [itens] = await db.execute(`SELECT * FROM itens_ordem WHERE ordem_servico_id = ?`, [id]);
+
+  return { ok: true, os, cliente, itens };
 });
-
 
 ipcMain.handle('excluir-os', async (_, id) => {
-  return new Promise((resolve) => {
-    db.run(`DELETE FROM itens_ordem WHERE ordem_servico_id = ?`, [id], function (err) {
-      if (err) return resolve({ ok: false });
+  const db = getPool();
 
-      db.run(`DELETE FROM ordens_servico WHERE id = ?`, [id], function (err2) {
-        if (err2) return resolve({ ok: false });
-        resolve({ ok: true });
-      });
-    });
-  });
+  await db.execute(`DELETE FROM caixa WHERE ordem_servico_id = ?`, [id]);
+
+  await db.execute(`DELETE FROM itens_ordem WHERE ordem_servico_id = ?`, [id]);
+
+  await db.execute(`DELETE FROM ordens_servico WHERE id = ?`, [id]);
+
+  return { ok: true };
 });
 
+
 ipcMain.handle('salvar-caixa', async (_, lancamento) => {
-  return new Promise((resolve) => {
-    const query = `
-      INSERT INTO caixa (ordem_servico_id, tipo, descricao, destinatario, valor, data)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
+  const db = getPool();
+  const query = `
+    INSERT INTO caixa (ordem_servico_id, tipo, descricao, destinatario, valor, data)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
 
-    const params = [
-      lancamento.ordem_servico_id,
-      lancamento.tipo,
-      lancamento.descricao,
-      lancamento.destinatario,
-      lancamento.valor,
-      lancamento.data || new Date().toISOString().split('T')[0]
-    ];
+  const params = [
+    lancamento.ordem_servico_id ?? null,
+    lancamento.tipo ?? null,
+    lancamento.descricao ?? null,
+    lancamento.destinatario ?? null,
+    lancamento.valor ?? null,
+    lancamento.data || new Date().toISOString().split('T')[0]
+  ];
 
-    db.run(query, params, function (err) {
-      if (err) {
-        console.error('Erro ao salvar no caixa:', err);
-        resolve({ ok: false });
-      } else {
-        resolve({ ok: true, id: this.lastID });
-      }
-    });
-  });
+  const [result] = await db.execute(query, params);
+  return { ok: true, id: result.insertId };
 });
 
 ipcMain.handle('buscar-caixa-por-os', async (_, ordemServicoId) => {
-  return new Promise((resolve) => {
-    const query = `
-      SELECT 
-        id,
-        ordem_servico_id,
-        tipo,
-        descricao,
-        destinatario,
-        valor,
-        data
-      FROM caixa
-      WHERE ordem_servico_id = ?
-      ORDER BY date(data) DESC, id DESC
-    `;
+  const db = getPool();
+  const [rows] = await db.execute(`
+    SELECT 
+      id,
+      ordem_servico_id,
+      tipo,
+      descricao,
+      destinatario,
+      valor,
+      data
+    FROM caixa
+    WHERE ordem_servico_id = ?
+    ORDER BY data DESC, id DESC
+  `, [ordemServicoId]);
 
-    db.all(query, [ordemServicoId], (err, rows) => {
-      if (err) {
-        console.error('Erro ao buscar lançamentos do caixa por OS:', err);
-        resolve([]);
-      } else {
-        resolve(rows);
-      }
-    });
-  });
+  return rows;
 });
 
-
 ipcMain.handle('atualizar-caixa', async (_, lancamento) => {
-  return new Promise((resolve) => {
-    const query = `
-      UPDATE caixa
-      SET 
-        ordem_servico_id = ?,
-        tipo = ?,
-        descricao = ?,
-        destinatario = ?,
-        valor = ?,
-        data = ?
-      WHERE id = ?
-    `;
+  const db = getPool();
+  const query = `
+    UPDATE caixa
+    SET 
+      ordem_servico_id = ?,
+      tipo = ?,
+      descricao = ?,
+      destinatario = ?,
+      valor = ?,
+      data = ?
+    WHERE id = ?
+  `;
 
-    const params = [
-      lancamento.ordem_servico_id,
-      lancamento.tipo,
-      lancamento.descricao,
-      lancamento.destinatario,
-      lancamento.valor,
-      lancamento.data || new Date().toISOString().split('T')[0],
-      lancamento.id
-    ];
+  const params = [
+    lancamento.ordem_servico_id,
+    lancamento.tipo,
+    lancamento.descricao,
+    lancamento.destinatario,
+    lancamento.valor,
+    lancamento.data || new Date().toISOString().split('T')[0],
+    lancamento.id
+  ];
 
-    db.run(query, params, function (err) {
-      if (err) {
-        console.error('Erro ao atualizar no caixa:', err);
-        resolve({ ok: false });
-      } else {
-        resolve({ ok: true, changes: this.changes });
-      }
-    });
-  });
+  const [result] = await db.execute(query, params);
+  return { ok: true, changes: result.affectedRows };
 });
 
 ipcMain.handle('buscar-caixa', async (_, { pagina = 1, limite = 20 }) => {
-  return new Promise((resolve) => {
-    const offset = (pagina - 1) * limite;
+  const db = getPool();
+  const page = parseInt(pagina);
+  const perPage = parseInt(limite);
+  const offset = (page - 1) * perPage;
 
+  try {
     const query = `
       SELECT
         caixa.id,
@@ -417,167 +387,443 @@ ipcMain.handle('buscar-caixa', async (_, { pagina = 1, limite = 20 }) => {
       FROM caixa
       LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
       LEFT JOIN clientes ON ordens_servico.cliente_id = clientes.id
-      ORDER BY date(caixa.data) DESC, caixa.id DESC
-      LIMIT ? OFFSET ?
+      ORDER BY caixa.data DESC, caixa.id DESC
+      LIMIT ${perPage} OFFSET ${offset}
     `;
 
-    db.all(query, [limite, offset], (err, rows) => {
-      if (err) {
-        console.error('Erro ao buscar lançamentos do caixa:', err);
-        resolve({ ok: false, dados: [], total: 0 });
-      } else {
-        db.get(`SELECT COUNT(*) as total FROM caixa`, (err2, res) => {
-          if (err2) {
-            console.error('Erro ao contar total do caixa:', err2);
-            resolve({ ok: false, dados: [], total: 0 });
-          } else {
-            resolve({ ok: true, dados: rows, total: res.total });
-          }
-        });
-      }
-    });
-  });
+    const [dados] = await db.execute(query);
+    const [[{ total }]] = await db.execute(`SELECT COUNT(*) as total FROM caixa`);
+
+    return { ok: true, dados, total };
+  } catch (error) {
+    console.error('❌ Erro ao buscar caixa:', error);
+    return { ok: false, dados: [], total: 0 };
+  }
 });
 
 ipcMain.handle('excluir-caixa', async (_, id) => {
-  return new Promise((resolve) => {
-    db.run(`DELETE FROM caixa WHERE id = ?`, [id], function (err) {
-      if (err) {
-        console.error('Erro ao excluir lançamento do caixa:', err);
-        return resolve({ ok: false });
-      }
-
-      resolve({ ok: true });
-    });
-  });
+  const db = getPool();
+  const [result] = await db.execute(`DELETE FROM caixa WHERE id = ?`, [id]);
+  return { ok: true };
 });
 
 ipcMain.handle('salvar-orcamento', async (_, { orcamento, itens }) => {
-  return new Promise((resolve, reject) => {
-    db.run(
-      `INSERT INTO orcamentos (cliente_nome, cliente_cnpj, observacoes) VALUES (?, ?, ?)`,
-      [orcamento.cliente_nome, orcamento.cliente_cnpj, orcamento.observacoes],
-      function (err) {
-        if (err) return resolve({ ok: false });
+  const db = getPool();
 
-        const orcamentoId = this.lastID;
+  const insertOrcamento = `
+    INSERT INTO orcamentos (cliente_nome, cliente_cnpj, observacoes)
+    VALUES (?, ?, ?)
+  `;
 
-        const stmt = db.prepare(`INSERT INTO itens_orcamento (orcamento_id, quantidade, descricao, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?)`);
+  const [result] = await db.execute(insertOrcamento, [
+    orcamento.cliente_nome,
+    orcamento.cliente_cnpj,
+    orcamento.observacoes
+  ]);
 
-        for (const item of itens) {
-          stmt.run([orcamentoId, item.quantidade, item.descricao, item.valor_unitario, item.valor_total]);
-        }
+  const orcamentoId = result.insertId;
 
-        stmt.finalize();
-        resolve({ ok: true });
-      }
-    );
+  const insertItem = `
+    INSERT INTO itens_orcamento (orcamento_id, quantidade, descricao, valor_unitario, valor_total)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  const promises = itens.map(item => {
+    return db.execute(insertItem, [
+      orcamentoId,
+      item.quantidade,
+      item.descricao,
+      item.valor_unitario,
+      item.valor_total
+    ]);
   });
+
+  await Promise.all(promises);
+
+  return { ok: true };
 });
 
 ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20, cliente = '', data = '' }) => {
-  return new Promise((resolve) => {
-    const offset = (pagina - 1) * limite;
+  const db = getPool();
+  const offset = (parseInt(pagina) - 1) * parseInt(limite);
+  const limit = parseInt(limite);
 
-    const where = [];
-    const params = [];
+  const where = [];
+  const params = [];
 
-    if (cliente) {
-      where.push(`o.cliente_nome LIKE ?`);
-      params.push(`%${cliente}%`);
-    }
+  if (cliente) {
+    where.push(`o.cliente_nome LIKE ?`);
+    params.push(`%${cliente}%`);
+  }
 
-    if (data) {
-      where.push(`DATE(o.data) = ?`);
-      params.push(data);
-    }
+  if (data) {
+    where.push(`DATE(o.data) = ?`);
+    params.push(data);
+  }
 
-    const whereSQL = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+  const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
+  try {
     const query = `
-      SELECT 
-        o.id, o.data, o.cliente_nome, o.cliente_cnpj
+      SELECT o.id, o.data, o.cliente_nome, o.cliente_cnpj
       FROM orcamentos o
       ${whereSQL}
-      ORDER BY date(o.data) DESC
-      LIMIT ? OFFSET ?
+      ORDER BY o.data DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
     const countQuery = `
-      SELECT COUNT(*) as total FROM orcamentos o
+      SELECT COUNT(*) as total
+      FROM orcamentos o
       ${whereSQL}
     `;
 
-    db.all(query, [...params, limite, offset], (err, rows) => {
-      if (err) {
-        console.error('Erro ao buscar orçamentos:', err);
-        return resolve({ ok: false, orcamentos: [], total: 0 });
-      }
+    const [orcamentos] = await db.execute(query, params);
+    const [[{ total }]] = await db.execute(countQuery, params);
 
-      db.get(countQuery, params, (err2, totalRes) => {
-        if (err2) {
-          console.error('Erro ao contar orçamentos:', err2);
-          return resolve({ ok: false, orcamentos: [], total: 0 });
-        }
-
-        resolve({ ok: true, orcamentos: rows, total: totalRes.total });
-      });
-    });
-  });
+    return { ok: true, orcamentos, total };
+  } catch (error) {
+    console.error('❌ Erro ao buscar orçamentos:', error);
+    return { ok: false, orcamentos: [], total: 0 };
+  }
 });
-
 
 
 ipcMain.handle('buscar-orcamento-completo', async (_, id) => {
-  return new Promise((resolve) => {
-    db.get(`SELECT * FROM orcamentos WHERE id = ?`, [id], (err, orcamento) => {
-      if (err || !orcamento) return resolve(null);
+  const db = getPool();
 
-      db.all(`SELECT * FROM itens_orcamento WHERE orcamento_id = ?`, [id], (err2, itens) => {
-        if (err2) return resolve(null);
-        resolve({ orcamento, itens });
-      });
-    });
-  });
+  const [[orcamento]] = await db.execute(`SELECT * FROM orcamentos WHERE id = ?`, [id]);
+  if (!orcamento) return null;
+
+  const [itens] = await db.execute(`SELECT * FROM itens_orcamento WHERE orcamento_id = ?`, [id]);
+
+  return { orcamento, itens };
 });
 
 ipcMain.handle('excluir-orcamento', async (_, id) => {
-  return new Promise((resolve) => {
-    db.run(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id], function (err) {
-      if (err) return resolve({ ok: false });
+  const db = getPool();
 
-      db.run(`DELETE FROM orcamentos WHERE id = ?`, [id], function (err2) {
-        if (err2) return resolve({ ok: false });
+  await db.execute(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id]);
+  await db.execute(`DELETE FROM orcamentos WHERE id = ?`, [id]);
 
-        resolve({ ok: true });
-      });
-    });
-  });
+  return { ok: true };
 });
 
 ipcMain.handle('atualizar-orcamento', async (_, { id, orcamento, itens }) => {
-  return new Promise((resolve) => {
-    db.run(
-      `UPDATE orcamentos SET cliente_nome = ?, cliente_cnpj = ?, observacoes = ? WHERE id = ?`,
-      [orcamento.cliente_nome, orcamento.cliente_cnpj, orcamento.observacoes, id],
-      function (err) {
-        if (err) return resolve({ ok: false });
+  const db = getPool();
 
-        db.run(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id], (err2) => {
-          if (err2) return resolve({ ok: false });
+  await db.execute(
+    `UPDATE orcamentos SET cliente_nome = ?, cliente_cnpj = ?, observacoes = ? WHERE id = ?`,
+    [orcamento.cliente_nome, orcamento.cliente_cnpj, orcamento.observacoes, id]
+  );
 
-          const stmt = db.prepare(`INSERT INTO itens_orcamento (orcamento_id, quantidade, descricao, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?)`);
+  await db.execute(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id]);
 
-          for (const item of itens) {
-            stmt.run([id, item.quantidade, item.descricao, item.valor_unitario, item.valor_total]);
-          }
+  const insertItem = `
+    INSERT INTO itens_orcamento (orcamento_id, quantidade, descricao, valor_unitario, valor_total)
+    VALUES (?, ?, ?, ?, ?)
+  `;
 
-          stmt.finalize();
-          resolve({ ok: true });
-        });
-      }
-    );
+  const promises = itens.map(item => {
+    return db.execute(insertItem, [
+      id,
+      item.quantidade,
+      item.descricao,
+      item.valor_unitario,
+      item.valor_total
+    ]);
   });
+
+  await Promise.all(promises);
+
+  return { ok: true };
+});
+
+ipcMain.handle('salvar-conta-receber', async (_, conta) => {
+  const db = getPool();
+
+  const query = `
+    INSERT INTO contas_receber (
+      cliente_nome, valor, vencimento, data_recebimento, status, observacoes
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  const clienteNome = conta.cliente_nome ?? 'Desconhecido';
+  const valor = conta.valor ?? 0;
+  const vencimento = conta.vencimento ?? null;
+  const dataRecebimento = conta.data_recebimento ?? null;
+  const status = conta.status ?? 'Pendente';
+  const observacoes = conta.observacao ?? null;
+
+  const [result] = await db.execute(query, [
+    clienteNome,
+    valor,
+    vencimento,
+    dataRecebimento,
+    status,
+    observacoes
+  ]);
+
+  return { ok: true, id: result.insertId };
+});
+
+ipcMain.handle('listar-contas-receber', async (_, filtros = {}) => {
+  const db = getPool();
+
+  const pagina = parseInt(filtros.pagina) || 1;
+  const limite = parseInt(filtros.limite) || 20;
+  const offset = (pagina - 1) * limite;
+
+  const where = [];
+  const params = [];
+
+  if (filtros.cliente) {
+    where.push(`cr.cliente_nome LIKE ?`);
+    params.push(`%${filtros.cliente}%`);
+  }
+
+  if (filtros.status) {
+    where.push(`cr.status = ?`);
+    params.push(filtros.status);
+  }
+
+  if (filtros.data) {
+    where.push(`DATE(cr.vencimento) = ?`);
+    params.push(filtros.data);
+  }
+
+  const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const query = `
+    SELECT 
+      cr.id,
+      cr.cliente_nome,
+      cr.valor,
+      cr.vencimento,
+      cr.data_recebimento,
+      cr.status,
+      cr.observacoes
+    FROM contas_receber cr
+    ${whereSQL}
+    ORDER BY cr.vencimento ASC
+    LIMIT ${limite} OFFSET ${offset}
+  `;
+
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM contas_receber cr
+    ${whereSQL}
+  `;
+
+  try {
+    const [dados] = await db.execute(query, params);
+    const [[{ total }]] = await db.execute(countQuery, params);
+
+    return { ok: true, dados, total };
+  } catch (err) {
+    console.error('❌ Erro ao listar contas a receber:', err);
+    return { ok: false, dados: [], total: 0 };
+  }
+});
+
+
+ipcMain.handle('receber-conta', async (_, id) => {
+  const db = getPool();
+
+  const hoje = new Date().toISOString().split('T')[0];
+
+  const query = `
+    UPDATE contas_receber
+    SET status = 'Recebido', data_recebimento = ?
+    WHERE id = ?
+  `;
+
+  await db.execute(query, [hoje, id]);
+
+  return { ok: true };
+});
+
+ipcMain.handle('buscar-contas-receber', async (_, id) => {
+  const db = getPool();
+  const [[conta]] = await db.execute(`
+    SELECT * FROM contas_receber WHERE id = ?
+  `, [id]);
+
+  return { ok: !!conta, conta };
+});
+
+ipcMain.handle('atualizar-conta-receber', async (_, dados) => {
+  const db = getPool();
+
+  const query = `
+    UPDATE contas_receber SET
+      cliente_nome = ?, valor = ?, vencimento = ?, 
+      data_recebimento = ?, status = ?, observacoes = ?
+    WHERE id = ?
+  `;
+
+  const params = [
+    dados.cliente_nome ?? null,
+    dados.valor ?? null,
+    dados.vencimento ?? null,
+    dados.data_recebimento ?? null,
+    dados.status ?? null,
+    dados.observacao ?? null,
+    dados.id ?? null
+  ];
+
+  await db.execute(query, params);
+  return { ok: true };
+});
+
+ipcMain.handle('excluir-conta-receber', async (_, id) => {
+  const db = getPool();
+  await db.execute('DELETE FROM contas_receber WHERE id = ?', [id]);
+  return { ok: true };
+});
+
+ipcMain.handle('salvar-conta-pagar', async (_, conta) => {
+  const db = getPool();
+
+  const query = `
+    INSERT INTO contas_pagar (
+      fornecedor_nome, valor, vencimento, data_pagamento, status, observacoes
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  const fornecedor = conta.fornecedor_nome ?? 'Desconhecido';
+  const valor = conta.valor ?? 0;
+  const vencimento = conta.vencimento ?? null;
+  const dataPagamento = conta.data_pagamento ?? null;
+  const status = conta.status ?? 'Pendente';
+  const observacoes = conta.observacao ?? null;
+
+  const [result] = await db.execute(query, [
+    fornecedor,
+    valor,
+    vencimento,
+    dataPagamento,
+    status,
+    observacoes
+  ]);
+
+  return { ok: true, id: result.insertId };
+});
+
+ipcMain.handle('listar-contas-pagar', async (_, filtros = {}) => {
+  const db = getPool();
+
+  const pagina = parseInt(filtros.pagina) || 1;
+  const limite = parseInt(filtros.limite) || 20;
+  const offset = (pagina - 1) * limite;
+
+  const where = [];
+  const params = [];
+
+  if (filtros.fornecedor) {
+    where.push(`cp.fornecedor_nome LIKE ?`);
+    params.push(`%${filtros.fornecedor}%`);
+  }
+
+  if (filtros.status) {
+    where.push(`cp.status = ?`);
+    params.push(filtros.status);
+  }
+
+  if (filtros.data) {
+    where.push(`DATE(cp.vencimento) = ?`);
+    params.push(filtros.data);
+  }
+
+  const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const query = `
+    SELECT 
+      cp.id,
+      cp.fornecedor_nome,
+      cp.valor,
+      cp.vencimento,
+      cp.data_pagamento,
+      cp.status,
+      cp.observacoes
+    FROM contas_pagar cp
+    ${whereSQL}
+    ORDER BY cp.vencimento ASC
+    LIMIT ${limite} OFFSET ${offset}
+  `;
+
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM contas_pagar cp
+    ${whereSQL}
+  `;
+
+  try {
+    const [dados] = await db.execute(query, params);
+    const [[{ total }]] = await db.execute(countQuery, params);
+
+    return { ok: true, dados, total };
+  } catch (err) {
+    console.error('❌ Erro ao listar contas a pagar:', err);
+    return { ok: false, dados: [], total: 0 };
+  }
+});
+
+
+ipcMain.handle('pagar-conta', async (_, id) => {
+  const db = getPool();
+  const hoje = new Date().toISOString().split('T')[0];
+
+  const query = `
+    UPDATE contas_pagar
+    SET status = 'Pago', data_pagamento = ?
+    WHERE id = ?
+  `;
+
+  await db.execute(query, [hoje, id]);
+  return { ok: true };
+});
+
+
+ipcMain.handle('buscar-conta-pagar', async (_, id) => {
+  const db = getPool();
+  const [[conta]] = await db.execute(`
+    SELECT * FROM contas_pagar WHERE id = ?
+  `, [id]);
+
+  return { ok: !!conta, conta };
+});
+
+
+ipcMain.handle('atualizar-conta-pagar', async (_, dados) => {
+  const db = getPool();
+
+  const query = `
+    UPDATE contas_pagar SET
+      fornecedor_nome = ?, valor = ?, vencimento = ?, 
+      data_pagamento = ?, status = ?, observacoes = ?
+    WHERE id = ?
+  `;
+
+  const params = [
+    dados.fornecedor_nome ?? null,
+    dados.valor ?? null,
+    dados.vencimento ?? null,
+    dados.data_pagamento ?? null,
+    dados.status ?? null,
+    dados.observacao ?? null,
+    dados.id ?? null
+  ];
+
+  await db.execute(query, params);
+  return { ok: true };
+});
+
+
+ipcMain.handle('excluir-conta-pagar', async (_, id) => {
+  const db = getPool();
+  await db.execute('DELETE FROM contas_pagar WHERE id = ?', [id]);
+  return { ok: true };
 });
 
 

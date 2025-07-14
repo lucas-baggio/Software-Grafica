@@ -13,16 +13,27 @@
 
   function formatarData(dataISO) {
     if (!dataISO) return '';
-    const [ano, mes, dia] = dataISO.split('-');
+
+    const data = new Date(dataISO);
+    if (isNaN(data)) return '';
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = data.getFullYear();
+
     return `${dia}/${mes}/${ano}`;
   }
 
+
   function formatarMoeda(valor) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
-  }
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4
+  }).format(valor);
+}
+
 
   function renderizarTabela() {
     tabela.innerHTML = '';

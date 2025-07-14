@@ -10,16 +10,27 @@
 
   function formatarData(dataISO) {
     if (!dataISO) return '';
-    const [ano, mes, dia] = dataISO.split('-');
+
+    const data = new Date(dataISO);
+    if (isNaN(data)) return '';
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = data.getFullYear();
+
     return `${dia}/${mes}/${ano}`;
   }
 
+
   function formatarMoeda(valor) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor);
-  }
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4
+  }).format(valor);
+}
+
 
   async function carregarTabelaOS() {
     const { ok, ordens: dados, total } = await window.api.listarOS({
@@ -193,7 +204,7 @@
     const dataAtual = `${dia}/${mes}/${ano}`;
     const dataComparacao = `${ano}-${mes}-${dia}`;
     console.log(ordens);
-    
+
     const ordensDia = ordens.filter(os => {
       const dataCriacao = os.created_at?.substring(0, 10);
       return dataCriacao === dataComparacao;
@@ -267,8 +278,11 @@
     window.carregarPagina(`ordemServiço/os_visualizacao.html`);
   };
 
-  window.editarOS = function (id) {
-    window.osEditId = id;
+  window.editarOS = async function (id) {
+    await new Promise(resolve => {
+      localStorage.setItem('osEditId', id);
+      setTimeout(resolve, 50);  
+    });
     carregarPagina('ordemServiço/ordem_servico.html');
   };
 

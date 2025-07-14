@@ -1,0 +1,46 @@
+<div class="listagem_ordem">
+  <div class="box">
+    <h1>Contas a Pagar</h1>
+
+    <div id="filtrosContainer" class="filtros-os" style="display: none;">
+      <div class="row">
+        <div class="col-6">
+          <label for="filtroFornecedor">Fornecedor:</label>
+          <input type="text" id="filtroFornecedor" placeholder="Nome do fornecedor">
+        </div>
+        <div class="col-6">
+          <label for="filtroDataVencimento">Data de Vencimento:</label>
+          <input type="date" id="filtroDataVencimento">
+        </div>
+      </div>
+      <div class="botoes-filtro">
+        <button id="btnAplicarFiltroPagar" class="btn-filtro">Filtrar</button>
+        <button id="btnLimparFiltroPagar" class="btn-reset">Limpar Filtros</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="filter">Filtros</button>
+      <button id="btnAdicionarContaPagar" class="adicionar">Adicionar Conta</button>
+    </div>
+
+    <table class="tabela-os">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Fornecedor</th>
+          <th>Valor (R$)</th>
+          <th>Vencimento</th>
+          <th>Pagamento</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaContasPagar">
+        <!-- Linhas inseridas via JS -->
+      </tbody>
+    </table>
+
+    <div id="paginacaoContasPagar" class="paginacao-os"></div>
+  </div>
+</div>

@@ -19,11 +19,19 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF("p", "mm", "a4");
 
-        const formatarData = (dataISO) => {
+        function formatarData(dataISO) {
             if (!dataISO) return '';
-            const [a, m, d] = dataISO.split("-");
-            return `${d}/${m}/${a}`;
-        };
+
+            const data = new Date(dataISO);
+            if (isNaN(data)) return '';
+
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+
+            return `${dia}/${mes}/${ano}`;
+        }
+
 
         const formatarValor = (valor) => {
             return new Intl.NumberFormat('pt-BR', {
@@ -183,11 +191,19 @@
             document.getElementById('btnFinalizar').style.display = 'none';
         }
 
-        const formatarData = (dataISO) => {
+        function formatarData(dataISO) {
             if (!dataISO) return '';
-            const [a, m, d] = dataISO.split('-');
-            return `${d}/${m}/${a}`;
-        };
+
+            const data = new Date(dataISO);
+            if (isNaN(data)) return '';
+
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+
+            return `${dia}/${mes}/${ano}`;
+        }
+
 
         const boolToSimNao = (valor) => valor ? 'Sim' : 'Não';
 
@@ -218,8 +234,8 @@
             tr.innerHTML = `
         <td>${item.quantidade}</td>
         <td>${item.descricao}</td>
-        <td>R$ ${item.valor_unitario.toFixed(2)}</td>
-        <td>R$ ${(item.quantidade * item.valor_unitario).toFixed(2)}</td>
+        <td>R$ ${Number(item.valor_unitario).toFixed(4)}</td>
+        <td>R$ ${(item.quantidade * Number(item.valor_unitario)).toFixed(4)}</td>
       `;
             tbody.appendChild(tr);
         });

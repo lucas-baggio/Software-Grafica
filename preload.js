@@ -39,10 +39,25 @@ contextBridge.exposeInMainWorld('api', {
   excluirOrcamento: (id) => ipcRenderer.invoke('excluir-orcamento', id),
   imprimirOrcamento: (id) => ipcRenderer.invoke('imprimir-orcamento', id),
 
+  // Boletos / Contas a Receber
+  salvarContaReceber: (dados) => ipcRenderer.invoke('salvar-conta-receber', dados),
+  buscarContasReceber: (params) => ipcRenderer.invoke('listar-contas-receber', params),
+  buscarContaReceberPorId: (id) => ipcRenderer.invoke('buscar-conta-receber-id', id),
+  atualizarContaReceber: (dados) => ipcRenderer.invoke('atualizar-conta-receber', dados),
+  excluirContaReceber: (id) => ipcRenderer.invoke('excluir-conta-receber', id),
+  receberConta: (id) => ipcRenderer.invoke('receber-conta', id),
+
+  salvarContaPagar: (dados) => ipcRenderer.invoke('salvar-conta-pagar', dados),
+  listarContasPagar: (filtros) => ipcRenderer.invoke('listar-contas-pagar', filtros),
+  pagarConta: (id) => ipcRenderer.invoke('pagar-conta', id),
+  buscarContaPagarPorId: (id) => ipcRenderer.invoke('buscar-conta-pagar-id', id),
+  atualizarContaPagar: (dados) => ipcRenderer.invoke('atualizar-conta-pagar', dados),
+  excluirContaPagar: (id) => ipcRenderer.invoke('excluir-conta-pagar', id),
+
+  // Utilitários
   readFileBase64: (filePath) => fs.readFileSync(filePath, { encoding: 'base64' }),
   join: (...args) => path.join(...args),
   appPath: appPath
-
 });
 
 contextBridge.exposeInMainWorld('pathInfo', {
