@@ -109,19 +109,33 @@
   `;
 
     const inputValor = div.querySelector('.valor_unitario');
-    inputValor.addEventListener('input', function () {
-      let valor = this.value.replace(/[^\d,]/g, '').replace(',', '.');
 
-      const partes = valor.split('.');
+    inputValor.addEventListener('input', function () {
+      // Remove caracteres inválidos, exceto dígitos e vírgula
+      let valor = this.value.replace(/[^\d,]/g, '');
+
+      const partes = valor.split(',');
+
       if (partes.length > 2) {
-        valor = partes[0] + '.' + partes.slice(1).join('');
+        // Se tiver mais de uma vírgula, remove as extras
+        valor = partes[0] + ',' + partes[1];
+      } else if (partes.length === 2 && partes[1].length > 4) {
+        // Limita a parte decimal a no máximo 4 dígitos
+        partes[1] = partes[1].substring(0, 4);
+        valor = partes[0] + ',' + partes[1];
       }
 
-      if (valor !== '') {
-        const numero = parseFloat(valor);
-        if (!isNaN(numero)) {
-          this.value = numero.toFixed(4).replace('.', ',');
-        }
+      this.value = valor;
+    });
+
+    inputValor.addEventListener('blur', function () {
+      let valor = this.value.replace(',', '.');
+      const numero = parseFloat(valor);
+
+      if (!isNaN(numero)) {
+        this.value = numero.toFixed(4).replace('.', ',');
+      } else {
+        this.value = '';
       }
     });
 
@@ -135,9 +149,50 @@
     return Array.from(checkboxes).map(cb => cb.value).join(', ');
   }
 
-  formOS.addEventListener('submit', (e) => {
+  formOS.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const erros = [];
+
+    // Valida cliente
+    if (!clienteSelect.value) {
+      erros.push('Selecione um cliente.');
+    }
+
+    // Valida data de entrada
+    if (!formOS.data_entrada.value) {
+      erros.push('Informe a data de entrada.');
+    }
+
+    // Valida se há pelo menos um item
+    const itensDOM = itensContainer.querySelectorAll('.item');
+    if (itensDOM.length === 0) {
+      erros.push('Adicione pelo menos um item.');
+    }
+
+    // Valida campos de cada item
+    itensDOM.forEach((item, index) => {
+      const qtd = item.querySelector('.quantidade').value.trim();
+      const desc = item.querySelector('.descricao').value.trim();
+      const val = item.querySelector('.valor_unitario').value.trim();
+
+      if (!qtd || isNaN(parseInt(qtd))) erros.push(`Item ${index + 1}: Quantidade inválida.`);
+      if (!desc) erros.push(`Item ${index + 1}: Descrição obrigatória.`);
+      if (!val || isNaN(parseFloat(val.replace(',', '.')))) erros.push(`Item ${index + 1}: Valor unitário inválido.`);
+    });
+
+    // Exibe os erros, se houver
+    if (erros.length > 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Verifique os campos:',
+        html: `<ul style="text-align:left">${erros.map(e => `<li>${e}</li>`).join('')}</ul>`,
+        confirmButtonText: 'Corrigir'
+      });
+      return;
+    }
+
+    // Captura dados do formulário
     const formData = new FormData(formOS);
     const os = Object.fromEntries(formData.entries());
 
@@ -148,9 +203,9 @@
     os.so_colado = formOS.so_colado.checked ? 1 : 0;
     os.vias = getViasSelecionadas();
 
-    const itens = Array.from(itensContainer.querySelectorAll('.item')).map(item => {
+    const itens = Array.from(itensDOM).map(item => {
       const quantidade = parseInt(item.querySelector('.quantidade').value) || 0;
-      const valor_unitario = parseFloat(item.querySelector('.valor_unitario').value) || 0;
+      const valor_unitario = parseFloat(item.querySelector('.valor_unitario').value.replace(',', '.')) || 0;
 
       return {
         quantidade,
@@ -167,9 +222,9 @@
       ? window.api.atualizarOS({ id: osId, os, itens })
       : window.api.salvarOS({ os, itens });
 
-    envio.then(res => {
+    envio.then(async res => {
       if (res.ok) {
-        Swal.fire({
+        await Swal.fire({
           title: 'Sucesso!',
           text: editando ? 'Ordem de Serviço atualizada!' : 'Ordem de Serviço salva com sucesso!',
           icon: 'success',
@@ -224,4 +279,5 @@
       }
     });
   });
+
 })();

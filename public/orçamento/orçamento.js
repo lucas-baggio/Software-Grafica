@@ -93,7 +93,7 @@
       const indexVirgula = valor.indexOf(',');
       if (indexVirgula !== -1) {
         const parteInteira = valor.slice(0, indexVirgula);
-        const parteDecimal = valor.slice(indexVirgula + 1).slice(0, 4);  
+        const parteDecimal = valor.slice(indexVirgula + 1).slice(0, 4);
         this.value = `${parteInteira},${parteDecimal}`;
       } else {
         this.value = valor;
@@ -178,7 +178,8 @@
 
     const itens = Array.from(itensContainer.querySelectorAll('.item')).map(row => {
       const quantidade = parseInt(row.querySelector('.quantidade').value) || 0;
-      const valor_unitario = parseFloat(row.querySelector('.valor_unitario').value) || 0;
+      const valor_unitario = parseFloat(row.querySelector('.valor_unitario').value.replace(',', '.')) || 0;
+
       const descricao = row.querySelector('.descricao').value.trim();
 
       return {
@@ -239,7 +240,7 @@
     doc.rect(5, 0, 2, 297, 'F');
 
     doc.setFillColor(255, 204, 0);
-    doc.rect(200, 0, 3, 50, 'F'); 
+    doc.rect(200, 0, 3, 50, 'F');
 
 
     const logoPath = window.api.join(window.api.appPath, 'logo.png');
@@ -309,7 +310,7 @@
     }).filter(item => item !== null);
 
     doc.autoTable({
-      startY: 75, 
+      startY: 75,
       head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
       body: itens,
       theme: 'grid',
@@ -322,8 +323,8 @@
         3: { halign: 'right', cellWidth: 36 },
         4: { halign: 'right', cellWidth: 36 }
       },
-      tableWidth: 193, 
-      margin: { left: 21 } 
+      tableWidth: 193,
+      margin: { left: 21 }
     });
 
     const nomeArquivo = `orcamento_${clienteNome.replace(/\s+/g, '_').toLowerCase()}.pdf`;

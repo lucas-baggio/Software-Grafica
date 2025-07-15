@@ -19,46 +19,40 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF("p", "mm", "a4");
 
-        function formatarData(dataISO) {
-            if (!dataISO) return '';
+        const margem = 10;
+        const alturaLinha = 7;
+        const alturaUtilPagina = 270;
 
+        const formatarData = (dataISO) => {
+            if (!dataISO) return '';
             const data = new Date(dataISO);
             if (isNaN(data)) return '';
-
-            const dia = String(data.getDate()).padStart(2, '0');
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const ano = data.getFullYear();
-
-            return `${dia}/${mes}/${ano}`;
-        }
-
-
-        const formatarValor = (valor) => {
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(valor);
+            return `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}/${data.getFullYear()}`;
         };
 
-        const margem = 10;
+        const formatarValor = (valor) => new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(valor);
+
         doc.setFont("courier", "normal");
         doc.setFontSize(10);
+        const desenharBorda = () => {
+            doc.setDrawColor(0);
+            doc.rect(margem, margem, 190, 270);
+        };
+        desenharBorda(); // desenha borda na primeira página
 
-        doc.setDrawColor(0);
-        doc.rect(margem, margem, 190, 270);
-
-        const yTopoCabecalho = margem;
-        const yBaseCabecalho = margem + 35;
-
+        // Cabeçalho
         const logoPath = window.api.join(window.api.appPath, 'logo.png');
         const logoBase64 = window.api.readFileBase64(logoPath);
         const logoDataURL = `data:image/png;base64,${logoBase64}`;
         const whatsappPath = window.api.join(window.api.appPath, 'whatsapp.png');
         const whatsappBase64 = window.api.readFileBase64(whatsappPath);
         const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
-        doc.addImage(logoDataURL, 'PNG', margem + 2, margem + 2, 45, 30);
 
-        doc.line(margem + 50, yTopoCabecalho, margem + 50, yBaseCabecalho);
+        doc.addImage(logoDataURL, 'PNG', margem + 2, margem + 2, 45, 30);
+        doc.line(margem + 50, margem, margem + 50, margem + 35);
 
         let xGraf = margem + 65;
         let yGraf = margem + 6;
@@ -69,22 +63,18 @@
         doc.text("CNPJ: 09.521.624/0001-29", xGraf, yGraf += 5);
         doc.text("Rua 27, 739 – Centro", xGraf, yGraf += 5);
         doc.text("Santa Fé do Sul - SP", xGraf, yGraf += 5);
-
-        doc.line(margem + 142, yTopoCabecalho, margem + 142, yBaseCabecalho);
+        doc.line(margem + 142, margem, margem + 142, margem + 35);
 
         const xRecibo = margem + 150;
         const yRecibo = margem + 2;
         doc.setFont("courier", "bold");
-        doc.text("RECIBO", xRecibo + 13, yRecibo + 7);
+        doc.text("RECIBO", xRecibo + 5, yRecibo + 7);
         doc.setFont("courier", "normal");
         doc.text(`Nº ${String(os.id).padStart(5, "0")}`, xRecibo + 5, yRecibo + 14);
-        doc.text(`${formatarData(hoje)}`, xRecibo + 5, yRecibo + 19);
+        // doc.text(`Emissão: ${formatarData(new Date())}`, xRecibo + 5, yRecibo + 19);
 
-        let yClienteTop = margem + 35;
-        let y = yClienteTop;
-        const labelX = margem + 2;
-        const valueX = margem + 50;
-
+        // Dados do cliente
+        let y = margem + 35;
         const campos = [
             ["Nome Fantasia:", cliente.nome_fantasia],
             ["Razão Social:", cliente.razao_social || "---"],
@@ -95,81 +85,134 @@
             ["CNPJ/CPF:", cliente.cnpj || "---"],
             ["INSC. MUN.:", cliente.inscricao_estadual || "---"]
         ];
-
         campos.forEach(([label, valor], i) => {
-            doc.setFont("courier", "bold");
             const yTexto = y + i * 6 + 4;
-            doc.text(label.toUpperCase(), labelX, yTexto);
-            doc.text(String(valor).toUpperCase(), valueX, yTexto);
+            doc.setFont("courier", "bold");
+            doc.text(label.toUpperCase(), margem + 2, yTexto);
             doc.setFont("courier", "normal");
+            doc.text(String(valor).toUpperCase(), margem + 50, yTexto);
         });
-
-        const linhaAltura = campos.length * 6;
-        const yClienteBottom = yClienteTop + linhaAltura;
-        const coluna1 = margem;
-        const coluna2 = margem + 48;
-        const coluna3 = margem + 190;
-
-        doc.line(coluna1, yClienteTop, coluna1, yClienteBottom);
-        doc.line(coluna3, yClienteTop, coluna3, yClienteBottom);
-        doc.line(coluna1, yClienteTop, coluna3, yClienteTop);
-        doc.line(coluna1, yClienteBottom, coluna3, yClienteBottom);
-
-        y += campos.length * 6 + 4;
+        y += campos.length * 6 + 12;
         doc.setFont("courier", "bold");
-        doc.text("OBSERVAÇÕES:", labelX, y);
-        doc.setFont("courier", "normal");
+        doc.text("OBSERVAÇÕES:", margem + 2, y);
+        y += 12;
 
-        const yTabela = y + 20;
+        // Tabela de Itens
         const colX = [margem, margem + 90, margem + 120, margem + 150];
         const colW = [90, 30, 30, 30];
-        const altura = 7;
 
-        doc.setFont("courier", "bold");
-        doc.rect(colX[0], yTabela, colW[0], altura);
-        doc.rect(colX[1], yTabela, colW[1], altura);
-        doc.rect(colX[2], yTabela, colW[2], altura);
-        doc.rect(colX[3], yTabela, colW[3], altura);
-        doc.text("DESCRIÇÃO", colX[0] + 2, yTabela + 5);
-        doc.text("QUANT.", colX[1] + 2, yTabela + 5);
-        doc.text("VALOR UN.", colX[2] + 2, yTabela + 5);
-        doc.text("VALOR TOTAL", colX[3] + 2, yTabela + 5);
+        const desenharCabecalhoTabela = () => {
+            doc.setFont("courier", "bold");
+            doc.rect(colX[0], y, colW[0], alturaLinha);
+            doc.rect(colX[1], y, colW[1], alturaLinha);
+            doc.rect(colX[2], y, colW[2], alturaLinha);
+            doc.rect(colX[3], y, colW[3], alturaLinha);
+            doc.text("DESCRIÇÃO", colX[0] + 2, y + 5);
+            doc.text("QUANT.", colX[1] + 2, y + 5);
+            doc.text("VALOR UN.", colX[2] + 2, y + 5);
+            doc.text("VALOR TOTAL", colX[3] + 2, y + 5);
+            y += alturaLinha;
+        };
 
-        const linhasNecessarias = Math.max(itens.length, 6);
-        const desconto = os.desconto || 0;
+        desenharCabecalhoTabela();
+
         const total = itens.reduce((acc, item) => acc + item.quantidade * item.valor_unitario, 0);
+        for (const item of itens) {
+            if (y + alturaLinha > alturaUtilPagina) {
+                doc.addPage();
+                desenharBorda();
 
-        doc.setFont("courier", "normal");
-        for (let i = 0; i < linhasNecessarias; i++) {
-            const yLinha = yTabela + altura * (i + 1);
-            doc.rect(colX[0], yLinha, colW[0], altura);
-            doc.rect(colX[1], yLinha, colW[1], altura);
-            doc.rect(colX[2], yLinha, colW[2], altura);
-            doc.rect(colX[3], yLinha, colW[3], altura);
-
-            if (i < itens.length) {
-                const item = itens[i];
-                doc.text(item.descricao.toUpperCase(), colX[0] + 2, yLinha + 5);
-                doc.text(String(item.quantidade), colX[1] + 2, yLinha + 5);
-                doc.text(formatarValor(item.valor_unitario), colX[2] + 2, yLinha + 5);
-                doc.text(formatarValor(item.quantidade * item.valor_unitario), colX[3] + 2, yLinha + 5);
+                y = margem;
+                desenharCabecalhoTabela();
             }
+
+            doc.setFont("courier", "normal");
+            doc.rect(colX[0], y, colW[0], alturaLinha);
+            doc.rect(colX[1], y, colW[1], alturaLinha);
+            doc.rect(colX[2], y, colW[2], alturaLinha);
+            doc.rect(colX[3], y, colW[3], alturaLinha);
+
+            let desc = item.descricao.toUpperCase();
+            if (desc.length > 34) desc = desc.slice(0, 34) + "...";
+
+            doc.text(desc, colX[0] + 2, y + 5);
+            doc.text(String(item.quantidade), colX[1] + 2, y + 5);
+            doc.text(formatarValor(item.valor_unitario), colX[2] + 2, y + 5);
+            doc.text(formatarValor(item.quantidade * item.valor_unitario), colX[3] + 2, y + 5);
+            y += alturaLinha;
         }
 
-        let yLinha = yTabela + altura * (linhasNecessarias + 1);
+        // Total
+        if (y + alturaLinha > alturaUtilPagina) {
+            doc.addPage();
+            desenharBorda();
+            y = margem;
+        }
         doc.setFont("courier", "bold");
-        doc.rect(colX[2], yLinha, colW[2] + colW[3], altura);
-        doc.text("TOTAL R$", colX[2] + 2, yLinha + 5);
+        doc.rect(colX[2], y, colW[2] + colW[3], alturaLinha);
+        doc.text("TOTAL R$", colX[2] + 2, y + 5);
         doc.setFont("courier", "normal");
-        doc.text(formatarValor(total), colX[3] + 2, yLinha + 5);
+        doc.text(formatarValor(total), colX[3] + 2, y + 5);
+        y += alturaLinha + 5;
 
-        yLinha += altura + 0;
+        // Data de entrada (logo abaixo da tabela)
+        if (y + 10 > alturaUtilPagina) {
+            doc.addPage();
+            desenharBorda();
+            y = margem;
+        }
         doc.setFont("courier", "bold");
-        doc.text("DATA DE ENTREGA:", margem + 0, yLinha);
+        doc.text("DATA DE ENTRADA:", margem + 2, y - 7);
         doc.setFont("courier", "normal");
+        doc.text(formatarData(os.data_entrada), margem + 40, y - 7);
+        y += 10;
 
-        doc.text(formatarData(os.data_entrega), margem + 40, yLinha);
+        // Especificações e condições (checar altura total estimada)
+        const specs = [
+            `Cores: ${os.cores || '---'}`,
+            `Sulfite: ${os.sulfite ? 'Sim' : 'Não'}`,
+            `Duplex: ${os.duplex ? 'Sim' : 'Não'}`,
+            `Couchê: ${os.couche ? 'Sim' : 'Não'}`,
+            `Adesivo: ${os.adesivo ? 'Sim' : 'Não'}`,
+            `Bond: ${os.bond ? 'Sim' : 'Não'}`,
+            `Copiativo: ${os.copiativo ? 'Sim' : 'Não'}`,
+            `Vias: ${os.vias || '---'}`,
+            `Formato: ${os.formato || '---'}`,
+            `Picotar: ${os.picotar ? 'Sim' : 'Não'}`,
+            `Só colado: ${os.so_colado ? 'Sim' : 'Não'}`,
+            `Numeração: ${os.numeracao || '---'}`
+        ];
+        const alturaFinal = specs.length * 5 + 25;
 
+        if (y + alturaFinal > alturaUtilPagina) {
+            doc.addPage();
+            desenharBorda();
+            y = margem + 20;
+        }
+
+        // Data de entrega
+        doc.setFont("courier", "bold");
+        doc.text("DATA DE ENTREGA:", margem + 2, y);
+        doc.setFont("courier", "normal");
+        doc.text(formatarData(os.data_entrega), margem + 40, y);
+        y += 10;
+
+        // Especificações
+        doc.setFont("courier", "bold");
+        doc.text("ESPECIFICAÇÕES:", margem + 2, y);
+        doc.setFont("courier", "normal");
+        specs.forEach((linha, i) => {
+            doc.text(linha, margem + 5, y + 6 + i * 5);
+        });
+        y += specs.length * 5 + 10;
+
+        // Condições
+        doc.setFont("courier", "bold");
+        doc.text("CONDIÇÕES DE PAGAMENTO:", margem + 2, y);
+        doc.setFont("courier", "normal");
+        doc.text(os.condicoes_pagamento || "---", margem + 5, y + 5);
+
+        // Finaliza
         doc.save(`Recibo_${os.id}.pdf`);
     }
 
