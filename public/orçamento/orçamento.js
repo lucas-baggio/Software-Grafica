@@ -285,7 +285,7 @@
     doc.setFontSize(12);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(clienteNome, 100, 69, { align: 'center' });
+    doc.text(clienteNome, 100, 105, { align: 'center' });
 
 
     const itens = Array.from(document.querySelectorAll('.item')).map((itemEl, idx) => {
@@ -309,7 +309,7 @@
     }).filter(item => item !== null);
 
     doc.autoTable({
-      startY: 75, 
+      startY: 110, 
       head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
       body: itens,
       theme: 'grid',
