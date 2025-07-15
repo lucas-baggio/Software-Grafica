@@ -1,6 +1,6 @@
 {
   "name": "grafica",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "author": "",
   "license": "ISC",
@@ -45,9 +45,14 @@
     "win": {
       "target": "nsis",
       "icon": "public/icon.ico"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "grafica-update.netlify.app"
     }
   },
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^5.0.2",
     "mysql2": "^3.14.2",

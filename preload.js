@@ -63,3 +63,7 @@ contextBridge.exposeInMainWorld('api', {
 contextBridge.exposeInMainWorld('pathInfo', {
   dirname: __dirname
 });
+
+contextBridge.exposeInMainWorld('atualizador', {
+  onMensagem: (callback) => ipcRenderer.on('update-mensagem', (_, msg) => callback(msg))
+});

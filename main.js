@@ -2,8 +2,43 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { conectarDB, getPool } = require('./db/db');
+const { autoUpdater } = require('electron-updater');
 
-Menu.setApplicationMenu(null);
+// Menu.setApplicationMenu(null);
+
+autoUpdater.on('checking-for-update', () => {
+  sendStatusToWindow('🔍 Verificando atualizações...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  sendStatusToWindow(`⬇️ Atualização disponível: v${info.version}. Baixando...`);
+});
+
+autoUpdater.on('update-not-available', () => {
+  sendStatusToWindow('✅ Nenhuma atualização encontrada.');
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  const porcentagem = progress.percent.toFixed(1);
+  sendStatusToWindow(`📦 Baixando atualização... ${porcentagem}%`);
+});
+
+autoUpdater.on('update-downloaded', () => {
+  sendStatusToWindow('🚀 Atualização pronta! Será aplicada no próximo reinício.');
+});
+
+autoUpdater.on('error', (err) => {
+  sendStatusToWindow(`❌ Erro ao atualizar: ${err.message}`);
+});
+
+
+// Envia mensagens para o renderer
+function sendStatusToWindow(texto) {
+  const janela = BrowserWindow.getAllWindows()[0];
+  if (janela) {
+    janela.webContents.send('update-mensagem', texto);
+  }
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -24,6 +59,9 @@ function createWindow() {
 app.whenReady().then(async () => {
   await conectarDB();
   createWindow();
+  setTimeout(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 1000);
 });
 
 ipcMain.handle('salvar-cliente', async (_, dados) => {
@@ -118,6 +156,10 @@ ipcMain.handle('atualizar-status-os', async (_, { id, status }) => {
 ipcMain.handle('salvar-os', async (_, { os, itens }) => {
   const db = getPool();
 
+  // Converte strings vazias em null para evitar erro de data
+  if (os.data_entrega === '') os.data_entrega = null;
+  if (os.data_entrada === '') os.data_entrada = null;
+
   const insertOS = `INSERT INTO ordens_servico (
     cliente_id, data_entrada, data_entrega, alteracao, mostrar_prova, cores,
     sulfite, duplex, couche, adesivo, bond, copiativo, vias, formato,
@@ -160,6 +202,7 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
 
   return { ok: true, id: ordemId };
 });
+
 
 ipcMain.handle('listar-os', async (_, params) => {
   const db = getPool();
