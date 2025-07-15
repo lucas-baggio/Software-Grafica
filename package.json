@@ -48,7 +48,7 @@
     },
     "publish": {
       "provider": "generic",
-      "url": "grafica-update.netlify.app"
+      "url": "https://grafica-update.netlify.app/"
     }
   },
   "dependencies": {
