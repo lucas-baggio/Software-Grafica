@@ -19,9 +19,11 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF("p", "mm", "a4");
 
-        const margem = 10;
+        const margem = 1;
+        const larguraPagina = 209;
         const alturaLinha = 7;
-        const alturaUtilPagina = 270;
+        const alturaUtilPagina = 277;
+        let y = 2;
 
         const formatarData = (dataISO) => {
             if (!dataISO) return '';
@@ -35,187 +37,191 @@
             currency: 'BRL'
         }).format(valor);
 
-        doc.setFont("courier", "normal");
-        doc.setFontSize(10);
-        const desenharBorda = () => {
-            doc.setDrawColor(0);
-            doc.rect(margem, margem, 190, 270);
-        };
-        desenharBorda(); // desenha borda na primeira página
+        // Borda da página
+        doc.setDrawColor(0);
+        doc.rect(margem, margem, larguraPagina - 1, 277);
 
-        // Cabeçalho
+        const topoX = margem;
+        const topoY = y - 1;
+        const topoW = 208;
+        const topoH = 33; // altura total do bloco
+        doc.setLineWidth(0.4); // espessura da borda
+        doc.roundedRect(topoX, topoY, topoW, topoH, 2, 2); // raio 2mm
+        doc.setLineWidth(0.2);
+
+        // // Borda externa do bloco do cabeçalho (logo, dados e RECIBO)
+        // doc.setLineWidth(0.8); // negrito
+        // doc.roundedRect(margem, y, 190, 34, 2, 2);
+        // doc.setLineWidth(0.2); // volta ao padrão
+
+
+        // Logo
         const logoPath = window.api.join(window.api.appPath, 'logo.png');
         const logoBase64 = window.api.readFileBase64(logoPath);
         const logoDataURL = `data:image/png;base64,${logoBase64}`;
         const whatsappPath = window.api.join(window.api.appPath, 'whatsapp.png');
         const whatsappBase64 = window.api.readFileBase64(whatsappPath);
         const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
+        doc.addImage(logoDataURL, 'PNG', margem + 2, y, 40, 30);
 
-        doc.addImage(logoDataURL, 'PNG', margem + 2, margem + 2, 45, 30);
-        doc.line(margem + 50, margem, margem + 50, margem + 35);
+        // Dados da gráfica
+        doc.setFont("helvetica", "bolditalic");
+        doc.setFontSize(10);
+        doc.text("Curtolo & Carrilo Gráfica Ltda", margem + 50, y + 4);
+        doc.setFont("helvetica", "bolditalic");
+        // Parte 1: "CNPJ:"
+        doc.setTextColor(200, 0, 0); // vermelho escuro, por exemplo
+        doc.text("CNPJ:", margem + 50, y + 9);
 
-        let xGraf = margem + 65;
-        let yGraf = margem + 6;
-        doc.text("Telefone: (17) 3631-4165", xGraf, yGraf);
-        doc.addImage(whatsappDataURL, 'PNG', 130, 12, 4, 4);
-        doc.text("graficaimage@graficaimage.com.br", xGraf, yGraf += 5);
-        doc.text("I.E.: 614.104.129.110", xGraf, yGraf += 5);
-        doc.text("CNPJ: 09.521.624/0001-29", xGraf, yGraf += 5);
-        doc.text("Rua 27, 739 – Centro", xGraf, yGraf += 5);
-        doc.text("Santa Fé do Sul - SP", xGraf, yGraf += 5);
-        doc.line(margem + 142, margem, margem + 142, margem + 35);
+        // Parte 2: valor + Insc. Est. + valor
+        doc.setTextColor(0, 0, 0); // volta pro preto
+        doc.text(" 09.521.624/0001-29      ", margem + 60, y + 9);
 
-        const xRecibo = margem + 150;
-        const yRecibo = margem + 2;
+        doc.setTextColor(200, 0, 0);
+        doc.text("Insc. Est.:", margem + 95, y + 9);
+
+        doc.setTextColor(0, 0, 0); // volta pro preto
+        doc.text(" 614.104.128.110", margem + 111, y + 9);
+
+        doc.setFont("helvetica", "bold");
+
+        doc.text("(17) 3631-4165", margem + 50, y + 17);
+        doc.text("graficaimage@graficaimage.com.br", margem + 50, y + 22);
+        doc.text("Rua 27 nº 739 – Centro – Santa Fé do Sul/SP", margem + 50, y + 27);
+
+        doc.setDrawColor(0); // preto
+        doc.setLineWidth(0.5); // mais grosso que o padrão (0.2)
+        doc.line(margem + 155, y - 1, margem + 155, y + 32); // (x1, y1, x2, y2)
+
+        // RECIBO e Nº
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(24);
+        doc.text("R E C I B O", margem + 158, y + 10);
+        doc.setFontSize(14);
+        doc.text(`Nº ${String(os.id).padStart(5, '0')}`, margem + 158, y + 24);
+
+        // Caixa de cliente
+        y += 34;
+        doc.setLineWidth(0.4); // borda bold (opcional)
+        doc.roundedRect(margem, y, larguraPagina - 1, 48, 2, 2); // raio 2mm nos cantos
+        doc.setLineWidth(0.2);
         doc.setFont("courier", "bold");
-        doc.text("RECIBO", xRecibo + 5, yRecibo + 7);
-        doc.setFont("courier", "normal");
-        doc.text(`Nº ${String(os.id).padStart(5, "0")}`, xRecibo + 5, yRecibo + 14);
-        // doc.text(`Emissão: ${formatarData(new Date())}`, xRecibo + 5, yRecibo + 19);
-
-        // Dados do cliente
-        let y = margem + 35;
-        const campos = [
-            ["Nome Fantasia:", cliente.nome_fantasia],
-            ["Razão Social:", cliente.razao_social || "---"],
-            ["Endereço:", cliente.endereco || "---"],
-            ["Cidade:", cliente.cidade || "---"],
-            ["Fone:", cliente.telefone || "---"],
-            ["I.E.:", cliente.inscricao_estadual || "---"],
-            ["CNPJ/CPF:", cliente.cnpj || "---"],
-            ["INSC. MUN.:", cliente.inscricao_estadual || "---"]
-        ];
-        campos.forEach(([label, valor], i) => {
-            const yTexto = y + i * 6 + 4;
-            doc.setFont("courier", "bold");
-            doc.text(label.toUpperCase(), margem + 2, yTexto);
+        doc.setFontSize(10);
+        const escreverLinha = (label, valor, offsetY, x1 = margem + 2, x2 = margem + 50) => {
+            doc.text(`${label}`, x1, y + offsetY);
             doc.setFont("courier", "normal");
-            doc.text(String(valor).toUpperCase(), margem + 50, yTexto);
-        });
-        y += campos.length * 6 + 12;
-        doc.setFont("courier", "bold");
-        doc.text("OBSERVAÇÕES:", margem + 2, y);
-        y += 12;
+            doc.text(`${valor || '---'}`, x2, y + offsetY);
+            doc.setFont("courier", "bold");
+        };
+
+        escreverLinha("Nome Fantasia:", cliente.nome_fantasia?.toUpperCase(), 5);
+        escreverLinha("Razão Social:", cliente.razao_social?.toUpperCase(), 10);
+        escreverLinha("Endereço:", cliente.endereco?.toUpperCase(), 15);
+        escreverLinha("Bairro:", cliente.bairro?.toUpperCase(), 20);
+        escreverLinha("Fone/Fax:", cliente.telefone?.toUpperCase(), 25);
+        escreverLinha("Cidade:", cliente.cidade?.toUpperCase(), 30);
+        escreverLinha("Insc. Estadual:", cliente.inscricao_estadual?.toUpperCase(), 35);
+        escreverLinha("CNPJ:", cliente.cnpj?.toUpperCase(), 40);
+        escreverLinha("Data Entrada:", formatarData(os.data_entrada), 45, margem + 2, margem + 40);
+        escreverLinha("Data Entrega:", formatarData(os.data_entrega), 45, margem + 70, margem + 110);
+        escreverLinha("Condições de Pagamento:", os.condicoes_pagamento?.toUpperCase(), 45, margem + 120, margem + 160);
+
+        y += 50;
 
         // Tabela de Itens
-        const colX = [margem, margem + 90, margem + 120, margem + 150];
-        const colW = [90, 30, 30, 30];
+        const colX = [margem, margem + 30, margem + 130, margem + 160];
+        const colW = [30, 100, 30, 30];
 
-        const desenharCabecalhoTabela = () => {
+        // Desenha cabeçalho com borda arredondada em cima
+        const desenharCabecalho = () => {
             doc.setFont("courier", "bold");
-            doc.rect(colX[0], y, colW[0], alturaLinha);
-            doc.rect(colX[1], y, colW[1], alturaLinha);
-            doc.rect(colX[2], y, colW[2], alturaLinha);
-            doc.rect(colX[3], y, colW[3], alturaLinha);
-            doc.text("DESCRIÇÃO", colX[0] + 2, y + 5);
-            doc.text("QUANT.", colX[1] + 2, y + 5);
-            doc.text("VALOR UN.", colX[2] + 2, y + 5);
-            doc.text("VALOR TOTAL", colX[3] + 2, y + 5);
+
+            // Cabeçalho com borda superior arredondada
+            doc.setLineWidth(0.4);
+            doc.roundedRect(margem, y, larguraPagina - 1, alturaLinha, 2, 2); // cria todos os cantos arredondados
+
+            // “Apaga” a parte inferior com uma linha preta
+            doc.setDrawColor(0);
+            doc.setLineWidth(0.4);
+            doc.line(margem, y + alturaLinha, margem + larguraPagina - 1, y + alturaLinha); // base reta
+            doc.setLineWidth(0.2); // volta ao normal
+
+
+            // Linhas internas verticais (retas, não arredondadas)
+            doc.line(colX[1], y, colX[1], y + alturaLinha); // entre QUANT e DESCRIÇÃO
+            doc.line(colX[2], y, colX[2], y + alturaLinha); // entre DESC e VALOR UNIT
+            doc.line(colX[3], y, colX[3], y + alturaLinha); // entre VALOR UNIT e VALOR
+
+            // Textos
+            doc.text("QUANT", colX[0] + 2, y + 5);
+            doc.text("DESCRIÇÃO", colX[1] + 2, y + 5);
+            doc.text("VALOR UNIT", colX[2] + 2, y + 5);
+            doc.text("VALOR", colX[3] + 2, y + 5);
+
             y += alturaLinha;
         };
 
-        desenharCabecalhoTabela();
+        desenharCabecalho();
 
-        const total = itens.reduce((acc, item) => acc + item.quantidade * item.valor_unitario, 0);
+        // Corpo dos itens
+        let total = 0;
+        doc.setFont("courier", "normal");
+        doc.setLineWidth(0.4);
+
         for (const item of itens) {
-            if (y + alturaLinha > alturaUtilPagina) {
+            if (y + alturaLinha > alturaUtilPagina - alturaLinha * 2) {
                 doc.addPage();
-                desenharBorda();
-
                 y = margem;
-                desenharCabecalhoTabela();
+                doc.rect(margem, margem, larguraPagina - 1, 277);
+                desenharCabecalho();
             }
 
-            doc.setFont("courier", "normal");
-            doc.rect(colX[0], y, colW[0], alturaLinha);
-            doc.rect(colX[1], y, colW[1], alturaLinha);
-            doc.rect(colX[2], y, colW[2], alturaLinha);
-            doc.rect(colX[3], y, colW[3], alturaLinha);
+            // Linhas horizontais e verticais
+            doc.line(margem, y, margem + larguraPagina - 1, y); // linha superior
+            doc.line(colX[1], y, colX[1], y + alturaLinha);
+            doc.line(colX[2], y, colX[2], y + alturaLinha);
+            doc.line(colX[3], y, colX[3], y + alturaLinha);
 
-            let desc = item.descricao.toUpperCase();
-            if (desc.length > 34) desc = desc.slice(0, 34) + "...";
+            const desc = item.descricao.length > 55 ? item.descricao.slice(0, 55) + "..." : item.descricao;
+            const valorTotal = item.quantidade * item.valor_unitario;
+            total += valorTotal;
 
-            doc.text(desc, colX[0] + 2, y + 5);
-            doc.text(String(item.quantidade), colX[1] + 2, y + 5);
+            doc.text(String(item.quantidade), colX[0] + 2, y + 5);
+            doc.text(desc.toUpperCase(), colX[1] + 2, y + 5);
             doc.text(formatarValor(item.valor_unitario), colX[2] + 2, y + 5);
-            doc.text(formatarValor(item.quantidade * item.valor_unitario), colX[3] + 2, y + 5);
+            doc.text(formatarValor(valorTotal), colX[3] + 2, y + 5);
             y += alturaLinha;
         }
 
-        // Total
+        // Total com fundo bold e borda arredondada inferior
         if (y + alturaLinha > alturaUtilPagina) {
             doc.addPage();
-            desenharBorda();
             y = margem;
-        }
-        doc.setFont("courier", "bold");
-        doc.rect(colX[2], y, colW[2] + colW[3], alturaLinha);
-        doc.text("TOTAL R$", colX[2] + 2, y + 5);
-        doc.setFont("courier", "normal");
-        doc.text(formatarValor(total), colX[3] + 2, y + 5);
-        y += alturaLinha + 5;
-
-        // Data de entrada (logo abaixo da tabela)
-        if (y + 10 > alturaUtilPagina) {
-            doc.addPage();
-            desenharBorda();
-            y = margem;
-        }
-        doc.setFont("courier", "bold");
-        doc.text("DATA DE ENTRADA:", margem + 2, y - 7);
-        doc.setFont("courier", "normal");
-        doc.text(formatarData(os.data_entrada), margem + 40, y - 7);
-        y += 10;
-
-        // Especificações e condições (checar altura total estimada)
-        const specs = [
-            `Cores: ${os.cores || '---'}`,
-            `Sulfite: ${os.sulfite ? 'Sim' : 'Não'}`,
-            `Duplex: ${os.duplex ? 'Sim' : 'Não'}`,
-            `Couchê: ${os.couche ? 'Sim' : 'Não'}`,
-            `Adesivo: ${os.adesivo ? 'Sim' : 'Não'}`,
-            `Bond: ${os.bond ? 'Sim' : 'Não'}`,
-            `Copiativo: ${os.copiativo ? 'Sim' : 'Não'}`,
-            `Vias: ${os.vias || '---'}`,
-            `Formato: ${os.formato || '---'}`,
-            `Picotar: ${os.picotar ? 'Sim' : 'Não'}`,
-            `Só colado: ${os.so_colado ? 'Sim' : 'Não'}`,
-            `Numeração: ${os.numeracao || '---'}`
-        ];
-        const alturaFinal = specs.length * 5 + 25;
-
-        if (y + alturaFinal > alturaUtilPagina) {
-            doc.addPage();
-            desenharBorda();
-            y = margem + 20;
+            doc.rect(margem, margem, larguraPagina, 277);
         }
 
-        // Data de entrega
+        // "Valor Total" linha final
         doc.setFont("courier", "bold");
-        doc.text("DATA DE ENTREGA:", margem + 2, y);
-        doc.setFont("courier", "normal");
-        doc.text(formatarData(os.data_entrega), margem + 40, y);
-        y += 10;
 
-        // Especificações
-        doc.setFont("courier", "bold");
-        doc.text("ESPECIFICAÇÕES:", margem + 2, y);
-        doc.setFont("courier", "normal");
-        specs.forEach((linha, i) => {
-            doc.text(linha, margem + 5, y + 6 + i * 5);
-        });
-        y += specs.length * 5 + 10;
+        // Borda inferior arredondada
+        doc.setLineWidth(0.4);
+        doc.roundedRect(margem, y, larguraPagina - 1, alturaLinha, 2, 2);
+        doc.setLineWidth(0.4);
+        doc.setDrawColor(0); // preto
+        doc.line(margem, y, margem + larguraPagina - 1, y); // linha do topo
 
-        // Condições
-        doc.setFont("courier", "bold");
-        doc.text("CONDIÇÕES DE PAGAMENTO:", margem + 2, y);
-        doc.setFont("courier", "normal");
-        doc.text(os.condicoes_pagamento || "---", margem + 5, y + 5);
+        doc.setLineWidth(0.2);
 
-        // Finaliza
+        // Linha vertical de separação do valor final
+        doc.line(margem + 160, y, margem + 160, y + alturaLinha);
+
+        // Textos
+        doc.text("VALOR TOTAL", margem + 2, y + 5);
+        doc.text(formatarValor(total), margem + 165, y + 5);
+
+
         doc.save(`Recibo_${os.id}.pdf`);
     }
-
 
     window.api.buscarOSDetalhada(parseInt(osId)).then(res => {
         if (!res.ok) {
