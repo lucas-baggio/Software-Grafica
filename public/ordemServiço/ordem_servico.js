@@ -71,11 +71,7 @@
       formOS.copiativo.checked = !!os.copiativo;
       formOS.so_colado.checked = !!os.so_colado;
 
-      const viasMarcadas = os.vias?.split(',') || [];
-      viasMarcadas.forEach(via => {
-        const checkbox = document.querySelector(`input[name="vias"][value="${via.trim()}"]`);
-        if (checkbox) checkbox.checked = true;
-      });
+      formOS.vias.value = os.vias || "";
 
       itens.forEach(item => {
         adicionarItem();
@@ -83,7 +79,7 @@
         const ultimo = itensDOM[itensDOM.length - 1];
         ultimo.querySelector('.quantidade').value = item.quantidade;
         ultimo.querySelector('.descricao').value = item.descricao;
-        ultimo.querySelector('.valor_unitario').value = item.valor_unitario;
+        ultimo.querySelector('.valor_unitario').value = parseFloat(item.valor_unitario).toFixed(4).replace('.', ',');
       });
     });
   }
@@ -144,11 +140,6 @@
 
   window.adicionarItem = adicionarItem;
 
-  function getViasSelecionadas() {
-    const checkboxes = document.querySelectorAll('input[name="vias"]:checked');
-    return Array.from(checkboxes).map(cb => cb.value).join(', ');
-  }
-
   formOS.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -201,7 +192,7 @@
     os.mostrar_prova = formOS.prova.value === "Sim" ? 1 : 0;
     os.copiativo = formOS.copiativo.checked ? 1 : 0;
     os.so_colado = formOS.so_colado.checked ? 1 : 0;
-    os.vias = getViasSelecionadas();
+    os.vias = formOS.vias.value || "";
 
     const itens = Array.from(itensDOM).map(item => {
       const quantidade = parseInt(item.querySelector('.quantidade').value) || 0;
@@ -211,11 +202,12 @@
         quantidade,
         descricao: item.querySelector('.descricao').value,
         valor_unitario,
-        valor_total: quantidade * valor_unitario
+        valor_total: parseFloat((quantidade * valor_unitario).toFixed(4))
       };
     });
 
-    const somaFinal = itens.reduce((total, item) => total + item.valor_total, 0);
+    const somaFinal = parseFloat(itens.reduce((total, item) => total + item.valor_total, 0).toFixed(4));
+
     const hoje = new Date().toISOString().split('T')[0];
 
     const envio = editando

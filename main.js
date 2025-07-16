@@ -24,8 +24,18 @@ autoUpdater.on('download-progress', (progress) => {
 });
 
 autoUpdater.on('update-downloaded', () => {
-  sendStatusToWindow('🚀 Atualização pronta! Será aplicada no próximo reinício.');
+  sendStatusToWindow('🚀 Atualização pronta! Reiniciando...');
+
+  const janela = BrowserWindow.getAllWindows()[0];
+  if (janela) {
+    janela.webContents.send('update-finalizar'); // avisa o renderer para mostrar isso no SweetAlert
+  }
+
+  setTimeout(() => {
+    autoUpdater.quitAndInstall();
+  }, 3000);
 });
+
 
 autoUpdater.on('error', (err) => {
   sendStatusToWindow(`❌ Erro ao atualizar: ${err.message}`);

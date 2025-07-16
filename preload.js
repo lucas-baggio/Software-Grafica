@@ -65,5 +65,6 @@ contextBridge.exposeInMainWorld('pathInfo', {
 });
 
 contextBridge.exposeInMainWorld('atualizador', {
-  onMensagem: (callback) => ipcRenderer.on('update-mensagem', (_, msg) => callback(msg))
+  onMensagem: (callback) => ipcRenderer.on('update-mensagem', (_, msg) => callback(msg)),
+  onFinalizar: (callback) => ipcRenderer.on('update-finalizar', callback)
 });

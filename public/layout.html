@@ -70,16 +70,44 @@
       carregarPagina('./ordemServiço/ordens_listagem.html')
     }
 
+    let swalInstance = null;
+
     if (window.atualizador) {
       window.atualizador.onMensagem((mensagem) => {
-        const statusEl = document.getElementById('statusUpdate');
-        if (statusEl) {
-          statusEl.textContent = mensagem;
+        if (mensagem.includes("Nenhuma atualização encontrada")) {
+          Swal.fire({
+            icon: 'info',
+            title: 'Atualização',
+            text: mensagem,
+            timer: 3000,
+            showConfirmButton: false
+          });
+          swalInstance = null; // não manter instância ativa
+          return;
+        }
+
+        if (!swalInstance) {
+          Swal.fire({
+            title: 'Atualizando...',
+            html: `<p id="swal-status">${mensagem}</p>`,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+              swalInstance = Swal.getHtmlContainer().querySelector('#swal-status');
+            }
+          });
         } else {
-          console.log('[Atualização]', mensagem);
+          swalInstance.innerText = mensagem;
+        }
+      });
+
+      window.atualizador.onFinalizar(() => {
+        if (swalInstance) {
+          swalInstance.innerText = '🚀 Atualização baixada! Reiniciando...';
         }
       });
     }
+
   </script>
 </body>
 

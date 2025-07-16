@@ -59,16 +59,11 @@
                             </select>
                         </div>
                         <div class="col-6">
-                            <label for="cores" class="form-label">Cores:</label>
-                            <select name="cores" id="cores" class="form-select">
-                                <option value="">---</option>
-                                <option value="1 cor">1 cor</option>
-                                <option value="2 cores">2 cores</option>
-                                <option value="3 cores">3 cores</option>
-                                <option value="cromia">Cromia</option>
-                            </select>
+                            <label for="cores" class="form-label">Cores de Impressão:</label>
+                            <input type="text" name="cores" id="cores" class="form-control"
+                                placeholder="Ex: 1 cor, 2 cores, cromia...">
                         </div>
-                    </div>
+
                 </fieldset>
 
                 <fieldset class="form-section">
@@ -131,30 +126,11 @@
                     <legend>Vias e Formato</legend>
                     <div class="row">
                         <div class="col-8">
-                            <label class="form-label">Vias:</label>
-                            <div class="checkbox-group">
-                                <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Amarela" id="via_amarela"
-                                        class="form-check-input">
-                                    <span>Amarela</span>
-                                </label>
-                                <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Azul" id="via_azul"
-                                        class="form-check-input">
-                                    <span>Azul</span>
-                                </label>
-                                <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Rosa" id="via_rosa"
-                                        class="form-check-input">
-                                    <span>Rosa</span>
-                                </label>
-                                <label class="form-check-label">
-                                    <input type="checkbox" name="vias" value="Verde" id="via_verde"
-                                        class="form-check-input">
-                                    <span>Verde</span>
-                                </label>
-                            </div>
+                            <label for="vias" class="form-label">Vias:</label>
+                            <input type="text" name="vias" id="vias" class="form-control"
+                                placeholder="Ex: Amarela, Azul, Rosa...">
                         </div>
+
                         <div class="col-4">
                             <label for="formato" class="form-label">Formato:</label>
                             <select name="formato" id="formato" class="form-select">
@@ -195,8 +171,7 @@
                         <div class="col-4">
                             <div class="form-check mt-4">
                                 <label for="numeracao" class="form-label">Numeração:</label>
-                            <input type="text" name="numeracao" id="numeracao" class="form-control"
-                                >
+                                <input type="text" name="numeracao" id="numeracao" class="form-control">
                             </div>
                         </div>
                     </div>
