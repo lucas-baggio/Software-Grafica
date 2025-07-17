@@ -252,13 +252,13 @@
     const whatsappBase64 = window.api.readFileBase64(whatsappPath);
     const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
 
-    // const emailPath = window.api.join(window.api.appPath, 'email.png');
-    // const emailBase64 = window.api.readFileBase64(emailPath);
-    // const emailDataURL = `data:image/png;base64,${emailBase64}`;
+    const emailPath = window.api.join(window.api.appPath, 'email.png');
+    const emailBase64 = window.api.readFileBase64(emailPath);
+    const emailDataURL = `data:image/png;base64,${emailBase64}`;
 
-    // const pingPath = window.api.join(window.api.appPath, 'ping.png');
-    // const pingBase64 = window.api.readFileBase64(pingPath);
-    // const pingDataURL = `data:image/png;base64,${pingBase64}`
+    const pingPath = window.api.join(window.api.appPath, 'ping.png');
+    const pingBase64 = window.api.readFileBase64(pingPath);
+    const pingDataURL = `data:image/png;base64,${pingBase64}`
 
     doc.setFont('times', 'italic');
     doc.setFontSize(12);
@@ -274,10 +274,10 @@
     doc.addImage(whatsappDataURL, 'PNG', 157, 36, 3, 3);
     doc.text('(17) 3631-4165', 190, 39, { align: 'right' });
 
-    // doc.addImage(emailDataURL, 'PNG', 120, 41, 3, 3);
+    doc.addImage(emailDataURL, 'PNG', 120, 41, 3, 3);
     doc.text('graficaimage@graficaimage.com.br', 190, 44, { align: 'right' });
 
-    // doc.addImage(pingDataURL, 'PNG', 102, 46, 3, 3);
+    doc.addImage(pingDataURL, 'PNG', 102, 46, 3, 3);
     doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 190, 49, { align: 'right' });
 
 
@@ -310,7 +310,7 @@
     }).filter(item => item !== null);
 
     doc.autoTable({
-      startY: 110, 
+      startY: 110,
       head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
       body: itens,
       theme: 'grid',
@@ -328,7 +328,9 @@
     });
 
     const nomeArquivo = `orcamento_${clienteNome.replace(/\s+/g, '_').toLowerCase()}.pdf`;
-    doc.save(nomeArquivo);
+    doc.autoPrint();
+    const pdfBlob = doc.output('bloburl');
+    window.open(pdfBlob);
   });
 
 

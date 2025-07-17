@@ -398,7 +398,9 @@
 
         y += alturaObservacoes + 5; // atualiza o y final caso queira colocar algo depois
 
-        doc.save(`Recibo_${os.id}.pdf`);
+        doc.autoPrint();
+        const pdfBlob = doc.output('bloburl');
+        window.open(pdfBlob);
     }
 
     window.api.buscarOSDetalhada(parseInt(osId)).then(res => {

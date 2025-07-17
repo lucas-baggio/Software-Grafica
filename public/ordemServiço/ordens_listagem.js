@@ -23,13 +23,13 @@
 
 
   function formatarMoeda(valor) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4
-  }).format(valor);
-}
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4
+    }).format(valor);
+  }
 
 
   async function carregarTabelaOS() {
@@ -155,9 +155,17 @@
 
     const dataAtual = `${dia}/${mes}/${ano}`;
     const ordensMes = ordens.filter(os => {
-      const [anoOS, mesOS] = os.data_entrada.split('-');
-      return anoOS == ano && mesOS == mes;
+      if (!os.data_entrada) return false;
+
+      const data = new Date(os.data_entrada);
+      if (isNaN(data)) return false;
+
+      const anoOS = data.getFullYear();
+      const mesOS = data.getMonth() + 1;
+
+      return anoOS == ano && mesOS == parseInt(mes);
     });
+
 
     const body = ordensMes.map(os => [
       os.id,
@@ -189,7 +197,9 @@
       ]]
     });
 
-    doc.save(`relatorio_os_${mes}_${ano}.pdf`);
+    doc.autoPrint();
+    const pdfBlob = doc.output('bloburl');
+    window.open(pdfBlob);
   });
 
   document.querySelector('.export-dia').addEventListener('click', async () => {
@@ -206,7 +216,12 @@
     console.log(ordens);
 
     const ordensDia = ordens.filter(os => {
-      const dataCriacao = os.created_at?.substring(0, 10);
+      if (!os.created_at) return false;
+
+      const data = new Date(os.created_at);
+      if (isNaN(data)) return false;
+
+      const dataCriacao = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
       return dataCriacao === dataComparacao;
     });
 
@@ -240,7 +255,9 @@
       ]]
     });
 
-    doc.save(`relatorio_os_${dia}_${mes}_${ano}.pdf`);
+    doc.autoPrint();
+    const pdfBlob = doc.output('bloburl');
+    window.open(pdfBlob);
   });
 
   window.excluir = function (id) {
@@ -281,7 +298,7 @@
   window.editarOS = async function (id) {
     await new Promise(resolve => {
       localStorage.setItem('osEditId', id);
-      setTimeout(resolve, 50);  
+      setTimeout(resolve, 50);
     });
     carregarPagina('ordemServiço/ordem_servico.html');
   };
