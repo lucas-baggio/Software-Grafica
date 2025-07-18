@@ -19,16 +19,16 @@
     }
 
     function formatarMoeda(valor) {
-        const numero = typeof valor === 'string'
-            ? parseFloat(valor.replace(/\./g, '').replace(',', '.'))
-            : parseFloat(valor);
+        if (valor === null || valor === undefined || valor === '') {
+            return 'R$ 0,0000';
+        }
 
-        if (isNaN(numero)) return 'R$ 0,0000';
+        const numero = typeof valor === 'string'
+            ? parseFloat(valor.replace(',', '.'))
+            : parseFloat(valor);
 
         return `R$ ${numero.toFixed(4).replace('.', ',')}`;
     }
-
-
 
     function renderizarTabela() {
         tabela.innerHTML = '';
@@ -128,74 +128,57 @@
         const { value: formValues } = await Swal.fire({
             title: `Editar Boleto #${id}`,
             html: `
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <input id="cliente_nome" class="swal2-input" placeholder="Nome do Cliente"
-                       style="width: 80%; margin: 0 auto; display: block;"
-                       value="${boleto.cliente_nome || ''}" />
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <input id="cliente_nome" class="swal2-input" placeholder="Nome do Cliente"
+                   style="width: 80%; margin: 0 auto; display: block;"
+                   value="${boleto.cliente_nome || ''}" />
 
-                <input id="valor" class="swal2-input" placeholder="Valor (ex: 150.75)"
-                       style="width: 80%; margin: 0 auto; display: block;"
-                       value="${new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(boleto.valor || 0)}" />
+            <input id="valor" type="text" class="swal2-input" placeholder="Valor (ex: 150,75)"
+                   style="width: 80%; margin: 0 auto; display: block;"
+                   value="${boleto.valor?.toString().replace('.', ',') || ''}" />
 
-                <input id="data_vencimento" type="date" class="swal2-input"
-                       style="width: 80%; margin: 0 auto; display: block;"
-                       value="${boleto.vencimento ? new Date(boleto.vencimento).toISOString().split('T')[0] : ''}" />
+            <input id="vencimento" type="date" class="swal2-input"
+                   style="width: 80%; margin: 0 auto; display: block;"
+                   value="${boleto.vencimento ? new Date(boleto.vencimento).toISOString().split('T')[0] : ''}" />
 
-                <textarea id="observacao" class="swal2-textarea" placeholder="Observações (opcional)"
-                          style="width: 80%; resize: vertical; margin: 0 auto; display: block;">${boleto.observacoes || ''}</textarea>
-            </div>`,
+            <textarea id="observacao" class="swal2-textarea" placeholder="Observações (opcional)"
+                      style="width: 80%; resize: vertical; margin: 0 auto; display: block;">${boleto.observacoes || ''}</textarea>
+        </div>`,
             focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: 'Salvar',
             cancelButtonText: 'Cancelar',
 
             didOpen: () => {
-                const input = document.getElementById('valor');
-
-                input.addEventListener('input', () => {
-                    let valor = input.value.replace(/[^\d,]/g, '');
-
-                    const partes = valor.split(',');
-                    const parteInteira = partes[0];
-                    const parteDecimal = partes[1] ? partes[1].slice(0, 4) : '';
-                    const valorFormatado = parteDecimal ? `${parteInteira},${parteDecimal}` : parteInteira;
-
-                    const numero = parseFloat(valorFormatado.replace(',', '.'));
-
-                    if (!isNaN(numero)) {
-                        input.value = numero.toFixed(4).replace('.', ',');
-                    } else {
-                        input.value = valorFormatado;
-                    }
-                });
-
+                aplicarMascaraValor(document.getElementById('valor'));
             },
 
             preConfirm: () => {
-                const cliente_nome = document.getElementById('cliente_nome').value.trim();
+                const cliente = document.getElementById('cliente_nome').value.trim();
                 const raw = document.getElementById('valor').value.trim();
-
-                const valorLimpo = raw.replace(/[^\d,]/g, '').replace(',', '.');
-                const valor = parseFloat(valorLimpo);
-
-                const vencimento = document.getElementById('data_vencimento').value;
+                const vencimento = document.getElementById('vencimento').value;
                 const observacao = document.getElementById('observacao').value;
 
-                if (!cliente_nome || isNaN(valor) || !vencimento) {
+                const regex = /^\d+(,\d{0,4})?$/;
+                if (!regex.test(raw)) {
+                    Swal.showValidationMessage('Valor inválido. Use até 4 casas decimais.');
+                    return false;
+                }
+
+                const valor = parseFloat(raw.replace(',', '.'));
+
+                if (!cliente || isNaN(valor) || !vencimento) {
                     Swal.showValidationMessage('Preencha todos os campos corretamente.');
                     return false;
                 }
 
                 return {
                     id: boleto.id,
-                    cliente_nome,
+                    cliente_nome: cliente,
                     valor,
-                    status: boleto.status,
                     vencimento,
-                    observacao
+                    observacao,
+                    status: boleto.status
                 };
             }
         });
@@ -210,8 +193,6 @@
             }
         }
     };
-
-
 
 
     document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
@@ -231,6 +212,25 @@
         carregarBoletos();
     });
 
+    function aplicarMascaraValor(input) {
+        input.addEventListener('input', () => {
+            let valor = input.value;
+
+            // Remove tudo que não for número ou vírgula
+            valor = valor.replace(/[^\d,]/g, '');
+
+            // Se o usuário digitar mais de uma vírgula, ignora as extras
+            const partes = valor.split(',');
+            const parteInteira = partes[0];
+            const parteDecimal = partes[1] ? partes[1].slice(0, 4) : '';
+
+            // Reatribui o valor ao campo
+            input.value = partes.length > 1 ? `${parteInteira},${parteDecimal}` : parteInteira;
+        });
+    }
+
+
+
     document.querySelector('.filter').addEventListener('click', () => {
         const filtros = document.getElementById('filtrosContainer');
         filtros.style.display = filtros.style.display === 'none' ? 'block' : 'none';
@@ -244,7 +244,7 @@
             html: `
         <div style="display: flex; flex-direction: column; gap: 10px;">
             <input id="cliente" class="swal2-input" placeholder="Nome do Cliente" style="width: 80%; margin: 0 auto; display: block;" />
-            <input id="valor" class="swal2-input" placeholder="Valor (ex: 150,75)" style="width: 80%; margin: 0 auto; display: block;" />
+            <input id="valor" type="text" class="swal2-input" placeholder="Valor (ex: 150,75)" style="width: 80%; margin: 0 auto; display: block;" />
             <input id="vencimento" type="date" class="swal2-input" style="width: 80%; margin: 0 auto; display: block;" />
             <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
                 <option value="Pendente" selected>Pendente</option>
@@ -258,51 +258,43 @@
             cancelButtonText: 'Cancelar',
 
             didOpen: () => {
-                const input = document.getElementById('valor');
-
-                input.addEventListener('input', () => {
-                    let valor = input.value.replace(/[^\d,]/g, '');
-
-                    const partes = valor.split(',');
-                    const parteInteira = partes[0];
-                    const parteDecimal = partes[1] ? partes[1].slice(0, 4) : '';
-                    const valorFormatado = parteDecimal ? `${parteInteira},${parteDecimal}` : parteInteira;
-
-                    const numero = parseFloat(valorFormatado.replace(',', '.'));
-
-                    if (!isNaN(numero)) {
-                        input.value = numero.toFixed(4).replace('.', ',');
-                    } else {
-                        input.value = valorFormatado;
-                    }
-                });
-
+                aplicarMascaraValor(document.getElementById('valor'));
             },
 
             preConfirm: () => {
-                const cliente = document.getElementById('cliente').value.trim();
+                const cliente = document.getElementById('cliente')?.value.trim() || document.getElementById('cliente_nome')?.value.trim();
                 const raw = document.getElementById('valor').value.trim();
+                const vencimento = document.getElementById('vencimento')?.value || document.getElementById('data_vencimento')?.value;
+                const observacao = document.getElementById('observacao')?.value || document.getElementById('observacoes')?.value;
+                const status = document.getElementById('status')?.value || 'Pendente';
 
-                const valorLimpo = raw.replace(/[^\d,]/g, '').replace(',', '.');
-                const valor = parseFloat(valorLimpo);
+                const regex = /^\d+(,\d{0,4})?$/;
+                if (!regex.test(raw)) {
+                    Swal.showValidationMessage('Valor inválido. Use até 4 casas decimais.');
+                    return false;
+                }
 
-                const vencimento = document.getElementById('vencimento').value;
-                const status = document.getElementById('status').value;
-                const observacao = document.getElementById('observacao').value;
+                const valor = parseFloat(raw.replace(',', '.'));
 
                 if (!cliente || isNaN(valor) || !vencimento) {
                     Swal.showValidationMessage('Preencha todos os campos corretamente.');
                     return false;
                 }
 
-                return { cliente, valor, vencimento, status, observacao };
+                return {
+                    cliente_nome: cliente,
+                    valor,
+                    vencimento,
+                    observacao,
+                    status
+                };
             }
         });
 
         if (!formValues) return;
 
         const payload = {
-            cliente_nome: formValues.cliente,
+            cliente_nome: formValues.cliente_nome,
             valor: formValues.valor,
             vencimento: formValues.vencimento,
             status: formValues.status || 'Pendente',

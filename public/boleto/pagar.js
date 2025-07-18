@@ -18,15 +18,12 @@
     }
 
     function formatarMoeda(valor) {
-        const numero = typeof valor === 'string'
-            ? parseFloat(valor.replace(/\./g, '').replace(',', '.'))
-            : parseFloat(valor);
+        if (valor === null || valor === undefined || valor === '') {
+            return 'R$ 0';
+        }
 
-        if (isNaN(numero)) return 'R$ 0,0000';
-
-        return `R$ ${numero.toFixed(4).replace('.', ',')}`;
+        return `R$ ${valor}`;
     }
-
 
     function renderizarTabela() {
         tabela.innerHTML = '';
@@ -151,7 +148,7 @@
             preConfirm: () => {
                 const raw = document.getElementById('valor').value.trim();
                 const valorLimpo = raw.replace(/[^\d,]/g, '').replace(',', '.');
-                const valor = parseFloat(valorLimpo);
+                const valor = parseFloat(raw.replace(',', '.')).toFixed(4);
 
                 if (isNaN(valor)) {
                     Swal.showValidationMessage('Valor inválido.');
@@ -225,13 +222,19 @@
 
     carregarContas();
 
+    function parseValorComVirgula(valorStr) {
+        const match = valorStr.match(/^(\d+)(,\d{0,4})?$/);
+        if (!match) return NaN;
+        return parseFloat(valorStr.replace(',', '.'));
+    }
+
     document.getElementById('btnAdicionarContaPagar').addEventListener('click', async () => {
         const { value: formValues } = await Swal.fire({
             title: 'Adicionar Conta a Pagar',
             html: `
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <input id="fornecedor" class="swal2-input" placeholder="Nome do Fornecedor" style="width: 80%; margin: 0 auto; display: block;" />
-                <input id="valor" class="swal2-input" placeholder="Valor (ex: 150,75)" style="width: 80%; margin: 0 auto; display: block;" />
+                <input type="text" id="valor" inputmode="decimal" class="swal2-input" placeholder="Valor (ex: 150,75)" style="width: 80%; margin: 0 auto; display: block;" />
                 <input id="vencimento" type="date" class="swal2-input" style="width: 80%; margin: 0 auto; display: block;" />
                 <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
                     <option value="Pendente" selected>Pendente</option>
@@ -248,34 +251,37 @@
                 const input = document.getElementById('valor');
 
                 input.addEventListener('input', () => {
-                    let valor = input.value.replace(/[^\d,]/g, '');
+                    let valor = input.value;
 
+                    // Remove tudo que não for número ou vírgula
+                    valor = valor.replace(/[^\d,]/g, '');
+
+                    // Garante apenas uma vírgula
                     const partes = valor.split(',');
                     const parteInteira = partes[0];
-                    const parteDecimal = partes[1] ? partes[1].slice(0, 4) : '';
-                    const valorFormatado = parteDecimal ? `${parteInteira},${parteDecimal}` : parteInteira;
+                    let parteDecimal = partes[1] || '';
 
-                    const numero = parseFloat(valorFormatado.replace(',', '.'));
+                    parteDecimal = parteDecimal.slice(0, 4);
 
-                    if (!isNaN(numero)) {
-                        input.value = numero.toFixed(4).replace('.', ',');
-                    } else {
-                        input.value = valorFormatado;
-                    }
+                    input.value = valor.includes(',') ? `${parteInteira},${parteDecimal}` : parteInteira;
                 });
-
             },
 
             preConfirm: () => {
                 const fornecedor = document.getElementById('fornecedor').value.trim();
                 const raw = document.getElementById('valor').value.trim();
-
-                const valorLimpo = raw.replace(/[^\d,]/g, '').replace(',', '.');
-                const valor = parseFloat(valorLimpo);
-
                 const vencimento = document.getElementById('vencimento').value;
                 const status = document.getElementById('status').value;
                 const observacao = document.getElementById('observacao').value;
+
+                const regex = /^\d+(,\d{0,4})?$/;
+                if (!regex.test(raw)) {
+                    Swal.showValidationMessage('Valor inválido. Use até 4 casas decimais.');
+                    return false;
+                }
+
+                // ✅ SALVA COMO NÚMERO REAL, NÃO COMO STRING
+                const valor = parseFloat(raw.replace(',', '.')) || 0;
 
                 if (!fornecedor || isNaN(valor) || !vencimento) {
                     Swal.showValidationMessage('Preencha todos os campos corretamente.');
@@ -284,13 +290,16 @@
 
                 return { fornecedor, valor, vencimento, status, observacao };
             }
+
         });
 
         if (!formValues) return;
+        const raw = document.getElementById('valor').value.trim();
+
 
         const payload = {
             fornecedor_nome: formValues.fornecedor,
-            valor: formValues.valor,
+            valor: Number(parseFloat(raw.replace(',', '.')).toFixed(4)),
             vencimento: formValues.vencimento,
             status: formValues.status || 'Pendente',
             observacao: formValues.observacao || null
@@ -309,5 +318,6 @@
             Swal.fire('Erro', 'Falha ao salvar a conta.', 'error');
         }
     });
+
 
 })();
