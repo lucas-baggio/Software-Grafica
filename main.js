@@ -252,14 +252,18 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
   return { ok: true, id: ordemId };
 });
 
-
 ipcMain.handle('listar-os', async (_, params) => {
   const db = getPool();
 
   const filtros = [];
   const valores = [];
 
-  // Aplica os filtros dinamicamente
+  // Paginação
+  const pagina = parseInt(params?.pagina || 1);
+  const limite = parseInt(params?.limite || 20);
+  const offset = (pagina - 1) * limite;
+
+  // Filtros dinâmicos
   if (params?.cliente) {
     filtros.push('c.nome_fantasia LIKE ?');
     valores.push(`%${params.cliente}%`);
@@ -279,33 +283,48 @@ ipcMain.handle('listar-os', async (_, params) => {
 
   try {
     const query = `
-      SELECT 
-        os.id,
-        os.data_entrada,
-        os.data_entrega,
-        os.status,
-        os.created_at,
-        c.nome_fantasia AS cliente,
-        COALESCE(SUM(io.valor_total), 0) AS total
-      FROM ordens_servico os
-      JOIN clientes c ON c.id = os.cliente_id
-      LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
-      ${where}
-      GROUP BY 
-        os.id, os.data_entrada, os.data_entrega,
-        os.status, os.created_at, c.nome_fantasia
-      ORDER BY os.id DESC
-    `;
+  SELECT 
+    os.id,
+    os.data_entrada,
+    os.data_entrega,
+    os.status,
+    os.created_at,
+    c.nome_fantasia AS cliente,
+    COALESCE(SUM(io.valor_total), 0) AS total
+  FROM ordens_servico os
+  JOIN clientes c ON c.id = os.cliente_id
+  LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
+  ${where}
+  GROUP BY 
+    os.id, os.data_entrada, os.data_entrega,
+    os.status, os.created_at, c.nome_fantasia
+  ORDER BY os.id DESC
+  LIMIT ${limite} OFFSET ${offset}
+`;
+
+
+    // Adiciona os parâmetros de paginação no final
+    valores.push(limite, offset);
 
     const [ordens] = await db.execute(query, valores);
 
-    return { ok: true, ordens, total: ordens.length };
+    // Total para paginação (sem LIMIT, sem GROUP BY)
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM ordens_servico os
+      JOIN clientes c ON c.id = os.cliente_id
+      ${where}
+    `;
+    const [countResult] = await db.execute(countQuery, valores.slice(0, -2)); // remove LIMIT e OFFSET
+
+    const total = countResult[0]?.total || 0;
+
+    return { ok: true, ordens, total };
   } catch (error) {
-    console.error('❌ Erro ao listar OS com filtros:', error);
+    console.error('❌ Erro ao listar OS com filtros e paginação:', error);
     return { ok: false, ordens: [], total: 0 };
   }
 });
-
 
 
 ipcMain.handle('imprimir-pagina', async () => {
