@@ -36,6 +36,13 @@ autoUpdater.on('update-downloaded', () => {
   }, 3000);
 });
 
+function safeString(str) {
+  return typeof str === 'string'
+    ? Buffer.from(str, 'binary').toString('utf8')
+    : str;
+}
+
+
 
 autoUpdater.on('error', (err) => {
   sendStatusToWindow(`❌ Erro ao atualizar: ${err.message}`);
@@ -79,8 +86,8 @@ ipcMain.handle('salvar-cliente', async (_, dados) => {
 
   const query = `INSERT INTO clientes (
     nome_fantasia, razao_social, endereco, bairro,
-    cidade, uf, telefone, inscricao_estadual, cnpj
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    cidade, uf, telefone, telefone_fixo, inscricao_estadual, cnpj
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   const [result] = await db.execute(query, [
     dados.nome_fantasia,
@@ -90,6 +97,7 @@ ipcMain.handle('salvar-cliente', async (_, dados) => {
     dados.cidade,
     dados.uf,
     dados.telefone,
+    dados.telefone_fixo,
     dados.inscricao_estadual,
     dados.cnpj
   ]);
@@ -100,24 +108,53 @@ ipcMain.handle('salvar-cliente', async (_, dados) => {
 ipcMain.handle('buscar-clientes', async (_, params) => {
   const db = getPool();
 
-  const pagina = parseInt(params?.pagina ?? '1', 10);
-  const limite = parseInt(params?.limite ?? '20', 10);
-
-  if (!Number.isInteger(pagina) || !Number.isInteger(limite)) {
-    return { ok: false, error: 'Parâmetros inválidos para paginação.' };
-  }
-
+  const pagina = Number.isInteger(parseInt(params?.pagina)) ? parseInt(params.pagina) : 1;
+  const limite = Number.isInteger(parseInt(params?.limite)) ? parseInt(params.limite) : 20;
   const offset = (pagina - 1) * limite;
 
-  try {
-    const query = `
-      SELECT id, nome_fantasia, cnpj, telefone, razao_social 
-      FROM clientes 
-      LIMIT ${limite} OFFSET ${offset}
-    `;
+  const filtros = [];
+  const valores = [];
 
-    const [clientes] = await db.execute(query);
-    const [[{ total }]] = await db.execute(`SELECT COUNT(*) as total FROM clientes`);
+  if (params?.nome) {
+    filtros.push('LOWER(nome_fantasia) LIKE ?');
+    valores.push(`%${params.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()}%`);
+  }
+
+  if (params?.cnpj) {
+    filtros.push('LOWER(cnpj) LIKE ?');
+    valores.push(`%${params.cnpj.toLowerCase()}%`);
+  }
+
+  if (params?.telefone) {
+    filtros.push('(LOWER(telefone) LIKE ? OR LOWER(telefone_fixo) LIKE ?)');
+    const tel = `%${params.telefone.toLowerCase()}%`;
+    valores.push(tel, tel);
+  }
+
+  const where = filtros.length > 0 ? `WHERE ${filtros.join(' AND ')}` : '';
+
+  const query = `
+  SELECT id, nome_fantasia, cnpj, telefone, telefone_fixo, razao_social
+  FROM clientes
+  ${where}
+  ORDER BY nome_fantasia ASC
+  LIMIT ${limite} OFFSET ${offset}
+`;
+
+  const queryParams = [...valores]; // sem limite e offset
+
+  try {
+    console.log('SQL final:', query);
+    console.log('Params finais:', queryParams);
+
+    const [clientes] = await db.execute(query, queryParams);
+
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM clientes
+      ${where}
+    `;
+    const [[{ total }]] = await db.execute(countQuery, valores);
 
     return { ok: true, clientes, total };
   } catch (error) {
@@ -125,6 +162,7 @@ ipcMain.handle('buscar-clientes', async (_, params) => {
     return { ok: false, error: 'Erro ao buscar clientes' };
   }
 });
+
 
 
 
@@ -173,8 +211,8 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
   const insertOS = `INSERT INTO ordens_servico (
     cliente_id, data_entrada, data_entrega, alteracao, mostrar_prova, cores,
     sulfite, duplex, couche, adesivo, bond, copiativo, vias, formato,
-    picotar, so_colado, numeracao, condicoes_pagamento
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    picotar, so_colado, numeracao, condicoes_pagamento, observacao
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   const [osResult] = await db.execute(insertOS, [
     os.cliente_id,
@@ -194,7 +232,8 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
     os.picotar || null,
     os.so_colado || null,
     os.numeracao || null,
-    os.condicoes_pagamento
+    os.condicoes_pagamento,
+    os.observacao
   ]);
 
   const ordemId = osResult.insertId;
@@ -216,15 +255,33 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
 
 ipcMain.handle('listar-os', async (_, params) => {
   const db = getPool();
-  const pagina = parseInt(params?.pagina || 1);
-  const limite = parseInt(params?.limite || 20);
-  const offset = (pagina - 1) * limite;
+
+  const filtros = [];
+  const valores = [];
+
+  // Aplica os filtros dinamicamente
+  if (params?.cliente) {
+    filtros.push('c.nome_fantasia LIKE ?');
+    valores.push(`%${params.cliente}%`);
+  }
+
+  if (params?.entrada) {
+    filtros.push('os.data_entrada = ?');
+    valores.push(params.entrada);
+  }
+
+  if (params?.entrega) {
+    filtros.push('os.data_entrega = ?');
+    valores.push(params.entrega);
+  }
+
+  const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
   try {
     const query = `
       SELECT 
-        os.id, 
-        os.data_entrada, 
+        os.id,
+        os.data_entrada,
         os.data_entrega,
         os.status,
         os.created_at,
@@ -233,22 +290,22 @@ ipcMain.handle('listar-os', async (_, params) => {
       FROM ordens_servico os
       JOIN clientes c ON c.id = os.cliente_id
       LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
+      ${where}
       GROUP BY 
         os.id, os.data_entrada, os.data_entrega,
-        os.status, c.nome_fantasia
+        os.status, os.created_at, c.nome_fantasia
       ORDER BY os.id DESC
-      LIMIT ${limite} OFFSET ${offset}
     `;
 
-    const [ordens] = await db.execute(query);
-    const [[{ total }]] = await db.execute(`SELECT COUNT(*) AS total FROM ordens_servico`);
+    const [ordens] = await db.execute(query, valores);
 
-    return { ok: true, ordens, total };
+    return { ok: true, ordens, total: ordens.length };
   } catch (error) {
-    console.error('❌ Erro ao listar OS:', error);
+    console.error('❌ Erro ao listar OS com filtros:', error);
     return { ok: false, ordens: [], total: 0 };
   }
 });
+
 
 
 ipcMain.handle('imprimir-pagina', async () => {
@@ -283,7 +340,7 @@ ipcMain.handle('atualizar-os', async (_, { id, os, itens }) => {
   UPDATE ordens_servico SET
     cliente_id = ?, data_entrada = ?, data_entrega = ?, alteracao = ?, mostrar_prova = ?, cores = ?,
     sulfite = ?, duplex = ?, couche = ?, adesivo = ?, bond = ?, copiativo = ?, vias = ?, formato = ?,
-    picotar = ?, so_colado = ?, numeracao = ?, condicoes_pagamento = ?
+    picotar = ?, so_colado = ?, numeracao = ?, condicoes_pagamento = ?, observacao = ?
   WHERE id = ?
 `, [
     os.cliente_id ?? null,
@@ -304,6 +361,7 @@ ipcMain.handle('atualizar-os', async (_, { id, os, itens }) => {
     os.so_colado ?? false,
     os.numeracao || null,
     os.condicoes_pagamento || null,
+    os.observacao,
     id
   ]);
 

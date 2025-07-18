@@ -3,9 +3,24 @@
 
   const formOS = document.getElementById('formOS');
   const clienteSelect = document.getElementById('clienteSelect');
+  formOS.prova.addEventListener('change', () => {
+    if (formOS.prova.value === "Sim" && formOS.alteracao.value.toLowerCase() === "sim") {
+      formOS.alteracao.value = "nao";
+    }
+  });
+
+  formOS.alteracao.addEventListener('change', () => {
+    if (formOS.alteracao.value.toLowerCase() === "sim" && formOS.prova.value === "Sim") {
+      formOS.prova.value = "Não";
+    }
+  });
+
+
   const itensContainer = document.getElementById('itensContainer');
 
   const osId = localStorage.getItem('osEditId');
+  if (osId) localStorage.removeItem('osEditId'); // Remove imediatamente após carregar
+
   const editando = !!osId;
   window.editandoOS = editando;
   window.osEditId = osId;
@@ -58,6 +73,19 @@
 
       formOS.prova.value = os.mostrar_prova ? "Sim" : "Não";
       formOS.alteracao.value = os.alteracao ? "sim" : "nao";
+
+      formOS.prova.addEventListener('change', () => {
+        if (formOS.prova.value === "Sim") {
+          formOS.alteracao.value = "nao";
+        }
+      });
+
+      formOS.alteracao.addEventListener('change', () => {
+        if (formOS.alteracao.value.toLowerCase() === "sim") {
+          formOS.prova.value = "Não";
+        }
+      });
+
       formOS.cores.value = os.cores;
       formOS.sulfite.value = os.sulfite;
       formOS.duplex.value = os.duplex;
@@ -67,8 +95,10 @@
       formOS.picotar.value = os.picotar;
       formOS.condicoes_pagamento.value = os.condicoes_pagamento;
       formOS.numeracao.value = os.numeracao;
+      formOS.observacao.value = os.observacao;
 
       formOS.copiativo.checked = !!os.copiativo;
+      formOS.adesivo.checked = !!os.adesivo;
       formOS.so_colado.checked = !!os.so_colado;
 
       formOS.vias.value = os.vias || "";
@@ -190,9 +220,24 @@
     os.cliente_id = clienteSelect.value;
     os.alteracao = formOS.alteracao.value === "Sim" ? 1 : 0;
     os.mostrar_prova = formOS.prova.value === "Sim" ? 1 : 0;
+
+    formOS.prova.addEventListener('change', () => {
+      if (formOS.prova.value === "Sim") {
+        formOS.alteracao.value = "nao";
+      }
+    });
+
+    formOS.alteracao.addEventListener('change', () => {
+      if (formOS.alteracao.value.toLowerCase() === "sim") {
+        formOS.prova.value = "Não";
+      }
+    });
+
     os.copiativo = formOS.copiativo.checked ? 1 : 0;
     os.so_colado = formOS.so_colado.checked ? 1 : 0;
+    os.adesivo = formOS.adesivo.checked ? 1 : 0;
     os.vias = formOS.vias.value || "";
+    os.observacao = formOS.observacao.value || "";
 
     const itens = Array.from(itensDOM).map(item => {
       const quantidade = parseInt(item.querySelector('.quantidade').value) || 0;
@@ -271,5 +316,12 @@
       }
     });
   });
+
+  window.addEventListener('beforeunload', () => {
+    if (window.editandoOS) {
+      localStorage.removeItem('osEditId');
+    }
+  });
+
 
 })();

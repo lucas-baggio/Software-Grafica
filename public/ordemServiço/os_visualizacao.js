@@ -15,7 +15,7 @@
 
     const hoje = new Date().toISOString().split("T")[0];
 
-    function gerarPdfOS(os, cliente, itens) {
+    function gerarPdfOS(os, cliente, itens, mostrarTotal = true) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF("p", "mm", "a4");
 
@@ -101,39 +101,71 @@
         doc.setFontSize(14);
         doc.text(`Nº ${String(os.id).padStart(5, '0')}`, margem + 166, y + 24);
 
+        // Avança para o topo da caixa
         y += 34;
         doc.setLineWidth(0.4);
-        doc.roundedRect(margem, y, larguraPagina, 48, 2, 2);
+
+        // Variável yDados começa logo após o topo da caixa
+        let yDados = y + 5;
+
+        // Função que escreve com quebra de linha e retorna altura usada
+        function escreverCampoComQuebra(label, valor, yInicial, x1, x2, estilo = "normal", larguraMax = 100, alturaLinha = 5) {
+            doc.setFont("courier", estilo);
+            doc.setFontSize(10);
+            if (!valor) valor = '---';
+
+            const linhas = doc.splitTextToSize(valor, larguraMax);
+            doc.text(`${label}`, x1, yInicial);
+            linhas.forEach((linha, i) => {
+                doc.text(linha, x2, yInicial + (i * alturaLinha));
+            });
+
+            return linhas.length * alturaLinha;
+        }
+
+        // Escreve os campos com quebra e atualiza yDados conforme o conteúdo cresce
+        yDados += escreverCampoComQuebra("Nome Fantasia:", cliente.nome_fantasia?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Razão Social:", cliente.razao_social?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Endereço:", cliente.endereco?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Bairro:", cliente.bairro?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Fone/Fax:", cliente.telefone?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Fone/Fixo:", cliente.telefone_fixo?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Cidade:", cliente.cidade?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("Insc. Estadual:", cliente.inscricao_estadual?.toUpperCase(), yDados, margem + 2, margem + 50);
+        yDados += escreverCampoComQuebra("CNPJ:", cliente.cnpj?.toUpperCase(), yDados, margem + 2, margem + 50);
+
+        // Agora que yDados final foi calculado, desenha a caixa
+        const alturaCaixaCliente = yDados - y + 5;
+        doc.roundedRect(margem, y, larguraPagina, alturaCaixaCliente, 2, 2);
         doc.setLineWidth(0.2);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
 
-        const escreverLinha = (label, valor, offsetY, x1 = margem + 2, x2 = margem + 50, estiloValor = "normal") => {
+        // Função simples pra campos de linha única
+        const escreverLinha = (label, valor, offsetY, xLabel = margem + 2, xInicioValor = margem + 2, estiloValor = "normal") => {
             doc.setFont("helvetica", estiloValor);
-            doc.text(`${label}`, x1, y + offsetY);
-            doc.setFont("helvetica", estiloValor);
-            doc.text(`${valor || '---'}`, x2, y + offsetY);
+
+            // Escreve o label
+            doc.text(label, xLabel, y + offsetY);
+
+            // Calcula largura do label para posicionar o valor com espaçamento
+            const larguraLabel = doc.getTextWidth(label);
+            const espacamento = 1; // espaço extra entre label e valor
+            const xValor = xInicioValor + larguraLabel + espacamento;
+
+            // Escreve o valor logo após o label
+            doc.text(valor || '---', xValor, y + offsetY);
         };
-        doc.setFont("helvetica", "normal");
-        escreverLinha("Nome Fantasia:", cliente.nome_fantasia?.toUpperCase(), 5, margem + 2, margem + 50, "normal");
-        escreverLinha("Razão Social:", cliente.razao_social?.toUpperCase(), 10, margem + 2, margem + 50, "normal");
-        escreverLinha("Endereço:", cliente.endereco?.toUpperCase(), 15, margem + 2, margem + 50, "normal");
-        escreverLinha("Bairro:", cliente.bairro?.toUpperCase(), 20, margem + 2, margem + 50, "normal");
-        escreverLinha("Fone/Fax:", cliente.telefone?.toUpperCase(), 25, margem + 2, margem + 50, "normal");
-        escreverLinha("Cidade:", cliente.cidade?.toUpperCase(), 30, margem + 2, margem + 50, "normal");
-        escreverLinha("Insc. Estadual:", cliente.inscricao_estadual?.toUpperCase(), 35, margem + 2, margem + 50, "normal");
-        escreverLinha("CNPJ:", cliente.cnpj?.toUpperCase(), 40, margem + 2, margem + 50, "normal");
-
-        // Datas com valor em negrito
-        escreverLinha("Data Entrada:", formatarData(os.data_entrada), 45, margem + 2, margem + 30, "bold");
-        escreverLinha("Data Entrega:", formatarData(os.data_entrega), 45, margem + 60, margem + 90, "bold");
-
-        // Condição de pagamento normal
-        escreverLinha("Condições de Pagamento:", os.condicoes_pagamento?.toUpperCase(), 45, margem + 110, margem + 160, "normal");
 
 
 
-        y += 50;
+        // Campos de data e condição de pagamento
+        escreverLinha("Data Entrada:", formatarData(os.data_entrada), yDados - y + 2, margem + 2, margem + 2, "bold");
+        escreverLinha("Data Entrega:", formatarData(os.data_entrega), yDados - y + 2, margem + 62, margem + 62, "bold");
+        escreverLinha("Condições de Pagamento:", os.condicoes_pagamento?.toUpperCase(), yDados - y + 2, margem + 114, margem + 114, "normal");
+
+
+        // Atualiza y global
+        y = yDados + 10;
+
 
         function desenharCabecalhoPerfeito(x, y, largura, altura, raio = 2, segmentos = 12) {
             const direita = x + largura;
@@ -318,7 +350,7 @@
 
         // Textos
         doc.text("VALOR TOTAL", colX[0] + 2, y + 5);
-        doc.text(formatarValor(total), colX[3] + 2, y + 5);
+        doc.text(mostrarTotal ? formatarValor(total) : '', colX[3] + 2, y + 5);
 
 
         const especificacoesBrutas = [
@@ -328,19 +360,28 @@
             ["Couche:", os.couche],
             ["Adesivo:", os.adesivo],
             ["Bond:", os.bond],
-            ["Copia:", os.copiativo],
+            ["Copiativo:", os.copiativo],
+            ["Adesivo", os.adesivo],
             ["Vias:", os.vias],
             ["Formato:", os.formato],
             ["Picotar:", os.picotar],
             ["Só colado:", os.so_colado],
-            ["Numeração:", os.numeracao]
+            ["Numeração:", os.numeracao],
+            ["Prova", os.prova],
+            ["Alteração", os.alteracao]
         ];
 
         // Transforma os valores: booleans para "Sim"/"Não", nulls para "--"
         const especificacoes = especificacoesBrutas.map(([label, valor]) => {
             let texto;
 
+            const labelNormalizado = label.toLowerCase();
+            const campoEspecial = ["copiativo", "alteração", "duplex", "sulfite", "couche", "bond"]
+                .some(campo => labelNormalizado.includes(campo));
+
             if (valor === null || valor === undefined || valor === "") {
+                texto = "--";
+            } else if (campoEspecial && (valor === false || valor === 0 || valor === "0")) {
                 texto = "--";
             } else if (valor === true || valor === 1) {
                 texto = "Sim";
@@ -386,12 +427,27 @@
         doc.setDrawColor(150); // cinza claro
         doc.setLineWidth(0.3);
         doc.line(margem + 2, y, larguraPagina - margem - 2, y);
-        y += 5; // Espaço entre especificações e observações
+
+        y += 8; // Espaço entre especificações e observações
 
         doc.setFont("helvetica", "bold");
         doc.text("OBSERVAÇÕES:", margem + 2, y);
 
-        y += 4; // pequeno espaço após o título // cinza claro
+        y += 8;
+
+        const textoObservacao = os.observacao?.trim() || "--";
+
+        // Divide o texto em múltiplas linhas com base na largura disponível
+        const linhasObservacao = doc.splitTextToSize(textoObservacao.toUpperCase(), larguraPagina - margem * 2 - 4);
+
+        // Define fonte e estilo
+        doc.setFont("helvetica", "normal");
+
+        // Renderiza as linhas de observação uma a uma
+        for (const linha of linhasObservacao) {
+            doc.text(linha, margem + 2, y);
+            y += 6; // espaço entre linhas
+        }
 
         // Caixa com espaço para escrever
         const alturaObservacoes = 30;
@@ -402,6 +458,20 @@
         const pdfBlob = doc.output('bloburl');
         window.open(pdfBlob);
     }
+
+    function imprimir(os, cliente, itens) {
+        gerarPdfOS(os, cliente, itens, true); // com total
+
+        // Aguarda 1 segundo antes de abrir o segundo
+        setTimeout(() => {
+            gerarPdfOS(os, cliente, itens, false); // sem total
+        }, 1000);
+    }
+
+    document.getElementById("btnImprimir").addEventListener("click", () => {
+        imprimir(window.osDetalhe, window.clienteDetalhe, window.itensDetalhe);
+    });
+
 
     window.api.buscarOSDetalhada(parseInt(osId)).then(res => {
         if (!res.ok) {
@@ -455,7 +525,9 @@
         document.getElementById('os_alteracao').textContent = os.alteracao ? 'Sim' : 'Não';
         document.getElementById('os_copiativo').textContent = boolToSimNao(os.copiativo);
         document.getElementById('os_so_colado').textContent = boolToSimNao(os.so_colado);
+        document.getElementById('os_adesivo').textContent = boolToSimNao(os.adesivo);
         document.getElementById('os_numeracao').textContent = os.numeracao || '-';
+        document.getElementById('os_observacao').textContent = os.observacao || '-';
 
         const tbody = document.getElementById('itens_os');
         itens.forEach(item => {

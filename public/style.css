@@ -178,6 +178,15 @@ iframe {
   border-radius: 4px;
 }
 
+textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+}
+
 button {
   padding: 10px 14px;
   border: 0;

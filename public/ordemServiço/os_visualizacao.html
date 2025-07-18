@@ -39,6 +39,7 @@
 
                 <div class="row">
                     <div class="col-md-4"><strong>Copiativo:</strong> <span id="os_copiativo"></span></div>
+                    <div class="col-md-4"><strong>Adesivo:</strong> <span id="os_adesivo"></span></div>
                 </div>
             </fieldset>
 
@@ -67,6 +68,17 @@
             </fieldset>
 
             <fieldset class="form-section">
+                <legend>Observações</legend>
+                <div class="row">
+                    <div class="col-12">
+                        <label for="observacoes" class="form-label">Observações Gerais:</label>
+                        <textarea name="observacao" id="os_observacao" class="form-control" rows="4"
+                            placeholder="Digite observações importantes sobre esta ordem de serviço..."></textarea>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
                 <legend>Itens da Ordem de Serviço</legend>
                 <table border="1" width="100%" class="tabela-os">
                     <thead>
@@ -83,12 +95,14 @@
             </fieldset>
 
             <div class="actions">
-                <button id="btnImprimir" onclick="gerarPdfOS(window.osDetalhe, window.clienteDetalhe, window.itensDetalhe)">Imprimir OS</button>
+                <button id="btnImprimir"
+                    onclick="imprimir(window.osDetalhe, window.clienteDetalhe, window.itensDetalhe)">Imprimir
+                    OS</button>
                 <button id="btnCancelar">Cancelar OS</button>
                 <button id="btnFinalizar">Finalizar OS</button>
             </div>
 
-            
+
         </div>
     </div>
 

@@ -3,12 +3,20 @@
 
   const form = document.getElementById('formCliente');
   const telefone = document.getElementById('telefone');
+  const telefoneFixo = document.getElementById('telefone_fixo');
   const cnpj = document.getElementById('cnpj');
 
+  // Máscara para celular
   IMask(telefone, {
     mask: '(00) 00000-0000'
   });
 
+  // Máscara para telefone fixo
+  IMask(telefoneFixo, {
+    mask: '(00) 0000-0000'
+  });
+
+  // Máscara para CNPJ
   IMask(cnpj, {
     mask: '00.000.000/0000-00'
   });

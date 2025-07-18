@@ -12,7 +12,8 @@ async function conectarDB() {
       database: 'railway',
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
+      charset: 'utf8mb4',
     });
 
     console.log('✅ Conectado ao banco MySQL da Railway com sucesso!');

@@ -16,7 +16,7 @@
         <td>${cliente.nome_fantasia}</td>
         <td>${cliente.cnpj}</td>
         <td>${cliente.razao_social || '-'}</td>
-        <td>${cliente.telefone}</td>
+        <td>${cliente.telefone || '-'} / ${cliente?.telefone_fixo || '-'}</td>
         <td>
           <button onclick="editarCliente(${cliente.id})"><span class="material-icons">edit</span></button>
         </td>
@@ -92,24 +92,34 @@
     filtros.style.display = filtros.style.display === 'none' ? 'block' : 'none';
   });
 
-  document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
-    const nome = document.getElementById('nome').value.toLowerCase();
-    const cnpj = document.getElementById('cnpj').value.toLowerCase();
-    const telefone = document.getElementById('telefone').value.toLowerCase();
+  document.getElementById('btnAplicarFiltro').addEventListener('click', async () => {
+    const nome = document.getElementById('nome').value.trim();
+    const cnpj = document.getElementById('cnpj').value.trim();
+    const telefone = document.getElementById('telefone').value.trim();
 
-    const filtradas = clientes.filter(cliente => {
-      const nomeOk = nome ? cliente.nome_fantasia.toLowerCase().includes(nome) : true;
-      const cnpjOk = cnpj ? cliente.cnpj.toLowerCase().includes(cnpj) : true;
-      const telOk = telefone ? cliente.telefone.toLowerCase().includes(telefone) : true;
-      return nomeOk && cnpjOk && telOk;
-    });
+    const filtros = {
+      pagina: 1,
+      limite: porPagina
+    };
 
-    paginaAtual = 1;
-    clientes = filtradas;
-    totalPaginas = Math.ceil(filtradas.length / porPagina);
+    if (nome) filtros.nome = nome;
+    if (cnpj) filtros.cnpj = cnpj;
+    if (telefone) filtros.telefone = telefone;
+
+    const { ok, clientes: dados, total } = await window.api.buscarClientes(filtros);
+
+
+    if (!ok) {
+      alert('Erro ao aplicar filtros');
+      return;
+    }
+
+    clientes = dados;
+    totalPaginas = Math.ceil(total / porPagina);
     renderizarTabela();
     renderizarPaginacao();
   });
+
 
   document.getElementById('btnLimparFiltro').addEventListener('click', () => {
     document.getElementById('nome').value = '';

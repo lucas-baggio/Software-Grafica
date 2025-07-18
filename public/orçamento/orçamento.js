@@ -46,6 +46,13 @@
       placeholder: "Digite para buscar um cliente"
     });
 
+    tomSelectCliente.on('change', (value) => {
+      const cliente = clientes.find(c => c.id == value);
+      if (cliente && cnpjInput) {
+        cnpjInput.value = cliente.cnpj || '';
+      }
+    });
+
     if (window.clienteIdParaSelecionar) {
       tomSelectCliente.setValue(window.clienteIdParaSelecionar);
     }
@@ -55,14 +62,6 @@
     }
   });
 
-
-  clienteSelect.addEventListener('change', () => {
-    const idSelecionado = clienteSelect.value;
-    const cliente = clientes.find(c => c.id == idSelecionado);
-    if (cliente && cnpjInput) {
-      cnpjInput.value = cliente.cnpj || '';
-    }
-  });
 
   function criarLinhaItem(item = {}) {
     const tr = document.createElement('tr');
@@ -233,6 +232,12 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const ano = hoje.getFullYear();
+    const dataFormatada = `${dia}/${mes}/${ano}`;
+
 
     doc.setFillColor(255, 204, 0);
     doc.rect(0, 0, 5, 297, 'F');
@@ -279,6 +284,11 @@
 
     doc.addImage(pingDataURL, 'PNG', 102, 46, 3, 3);
     doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 190, 49, { align: 'right' });
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Data de Emissão: ${dataFormatada}`, 190, 54, { align: 'right' });
 
 
     const clienteNome = document.getElementById('clienteSelect')?.selectedOptions[0]?.textContent?.trim().toUpperCase() || 'CLIENTE';

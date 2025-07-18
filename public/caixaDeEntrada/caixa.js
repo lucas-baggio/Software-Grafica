@@ -51,8 +51,16 @@
     let totalSaida = 0;
 
     dados.forEach(ent => {
-      if (ent.tipo.toLowerCase().includes('entrada')) totalEntrada += ent.valor;
-      if (ent.tipo.toLowerCase().includes('saída') || ent.tipo.toLowerCase().includes('saida')) totalSaida += ent.valor;
+      if (ent.tipo.toLowerCase().includes('entrada')) {
+        const valor = parseFloat(ent.valor);
+        if (!isNaN(valor)) totalEntrada += valor;
+      }
+
+      if (ent.tipo.toLowerCase().includes('saída') || ent.tipo.toLowerCase().includes('saida')) {
+        const valor = parseFloat(ent.valor);
+        if (!isNaN(valor)) totalSaida += valor;
+      }
+
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -114,7 +122,7 @@
           if (!isNaN(numero)) {
             this.value = numero.toFixed(4).replace('.', ',');
           } else {
-            this.value = valorFormatado; 
+            this.value = valorFormatado;
           }
         });
 
