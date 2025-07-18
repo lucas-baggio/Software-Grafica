@@ -411,14 +411,15 @@ ipcMain.handle('excluir-os', async (_, id) => {
 ipcMain.handle('salvar-caixa', async (_, lancamento) => {
   const db = getPool();
   const query = `
-    INSERT INTO caixa (ordem_servico_id, tipo, descricao, destinatario, valor, data)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO caixa (ordem_servico_id, tipo, descricao, pagamento, destinatario, valor, data)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
     lancamento.ordem_servico_id ?? null,
     lancamento.tipo ?? null,
     lancamento.descricao ?? null,
+    lancamento.pagamento ?? null,
     lancamento.destinatario ?? null,
     lancamento.valor ?? null,
     lancamento.data || new Date().toISOString().split('T')[0]
@@ -437,6 +438,7 @@ ipcMain.handle('buscar-caixa-por-os', async (_, ordemServicoId) => {
       tipo,
       descricao,
       destinatario,
+      pagamento,
       valor,
       data
     FROM caixa
@@ -484,26 +486,35 @@ ipcMain.handle('buscar-caixa', async (_, { pagina = 1, limite = 20 }) => {
   try {
     const query = `
       SELECT
-        caixa.id,
-        caixa.ordem_servico_id,
-        caixa.tipo,
-        caixa.descricao,
-        caixa.destinatario,
-        caixa.valor,
-        caixa.data,
-        CASE
-          WHEN caixa.tipo = 'Entrada' THEN clientes.nome_fantasia
-          ELSE caixa.destinatario
-        END AS nome_exibicao
-      FROM caixa
-      LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
-      LEFT JOIN clientes ON ordens_servico.cliente_id = clientes.id
-      ORDER BY caixa.data DESC, caixa.id DESC
-      LIMIT ${perPage} OFFSET ${offset}
+      caixa.id,
+      caixa.ordem_servico_id,
+      caixa.tipo,
+      caixa.descricao,
+      caixa.destinatario,
+      caixa.valor,
+      caixa.data,
+      caixa.pagamento,
+      CASE
+        WHEN caixa.tipo = 'Entrada' THEN clientes.nome_fantasia
+        ELSE caixa.destinatario
+      END AS nome_exibicao
+    FROM caixa
+    LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
+    LEFT JOIN clientes ON ordens_servico.cliente_id = clientes.id
+    WHERE caixa.ordem_servico_id IS NULL OR ordens_servico.status = 'Finalizada'
+    ORDER BY caixa.data DESC, caixa.id DESC
+    LIMIT ${perPage} OFFSET ${offset}
+
     `;
 
     const [dados] = await db.execute(query);
-    const [[{ total }]] = await db.execute(`SELECT COUNT(*) as total FROM caixa`);
+    const [[{ total }]] = await db.execute(`
+      SELECT COUNT(*) as total
+      FROM caixa
+      LEFT JOIN ordens_servico ON caixa.ordem_servico_id = ordens_servico.id
+      WHERE caixa.ordem_servico_id IS NULL OR ordens_servico.status = 'Finalizada'
+    `);
+
 
     return { ok: true, dados, total };
   } catch (error) {

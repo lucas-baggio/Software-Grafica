@@ -269,36 +269,6 @@
           showConfirmButton: false
         });
 
-        if (editando) {
-          window.api.buscarCaixaPorOs(osId).then(lancamentos => {
-            const entrada = lancamentos.find(l => l.tipo === "Entrada");
-
-            if (!entrada) return;
-
-            const entradaAtualizada = {
-              id: entrada.id,
-              ordem_servico_id: parseInt(osId, 10),
-              tipo: "Entrada",
-              descricao: entrada.descricao || "",
-              destinatario: entrada.destinatario || "",
-              valor: somaFinal,
-              data: hoje
-            };
-
-            window.api.atualizarCaixa(entradaAtualizada);
-          });
-        } else {
-          const entrada = {
-            ordem_servico_id: parseInt(res.id, 10),
-            tipo: "Entrada",
-            descricao: "",
-            valor: somaFinal,
-            data: hoje
-          };
-
-          window.api.salvarCaixa(entrada);
-        }
-
         window.editandoOS = false;
         window.osEditId = null;
         localStorage.removeItem('osEditId');

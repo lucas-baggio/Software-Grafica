@@ -67,6 +67,7 @@
         <td>${ent.id}</td>
         <td>${ent.nome_exibicao || '-'}</td>
         <td>${ent.tipo}</td>
+        <td>${ent.pagamento || '-'}</td>
         <td>${formatarData(ent.data)}</td>
         <td>${formatarMoeda(ent.valor)}</td>
         <td>

@@ -542,7 +542,6 @@
         });
     });
 
-
     document.getElementById('btnFinalizar').addEventListener('click', () => {
         Swal.fire({
             title: 'Finalizar OS?',
@@ -553,14 +552,79 @@
             cancelButtonText: 'Cancelar'
         }).then(result => {
             if (result.isConfirmed) {
-                window.api.atualizarStatusOS(osId, 'Finalizada').then(res => {
+                // Desabilita o botão para evitar cliques duplos
+                const btn = document.getElementById('btnFinalizar');
+                btn.disabled = true;
+
+                window.api.atualizarStatusOS(osId, 'Finalizada').then(async res => {
                     if (res.ok) {
-                        Swal.fire('OS finalizada!', '', 'success').then(() => {
-                            window.carregarPagina('ordemServiço/ordens_listagem.html');
+                        const hoje = new Date().toISOString().split("T")[0];
+
+                        // ✅ Calcula total com segurança
+                        const somaFinal = Array.isArray(window.itensDetalhe)
+                            ? window.itensDetalhe.reduce((acc, item) => acc + (item.quantidade * parseFloat(item.valor_unitario || 0)), 0)
+                            : 0;
+
+                        const descricaoPadrao = `Recebimento OS #${osId}`;
+
+                        const { value: formValues } = await Swal.fire({
+                            title: 'Cadastrar entrada no caixa',
+                            html: `
+                            <input id="descricao" class="swal2-input" placeholder="Descrição" style="width: 80%;" value="${descricaoPadrao}">
+                            <input id="pagamento" class="swal2-input" placeholder="Forma de Pagamento" style="width: 80%;" >
+                            <input id="valor" type="number" step="0.0001" class="swal2-input" style="width: 80%;" placeholder="Valor" value="${somaFinal.toFixed(4)}">
+                            <input id="data" class="swal2-input" style="width: 80%;" placeholder="Data" type="date">
+                        `,
+                            focusConfirm: false,
+                            showCancelButton: true,
+                            confirmButtonText: 'Salvar entrada',
+                            cancelButtonText: 'Cancelar',
+                            preConfirm: () => {
+                                const valor = parseFloat(document.getElementById('valor').value);
+                                if (isNaN(valor) || valor <= 0) {
+                                    Swal.showValidationMessage('Insira um valor válido maior que zero.');
+                                    return false;
+                                }
+
+                                return {
+                                    descricao: document.getElementById('descricao').value,
+                                    valor,
+                                    pagamento: document.getElementById('pagamento').value,
+                                    data: document.getElementById('data').value
+                                };
+                            }
                         });
+
+                        if (formValues) {
+                            const entrada = {
+                                ordem_servico_id: parseInt(osId, 10),
+                                tipo: "Entrada",
+                                pagamento: formValues.pagamento,
+                                descricao: formValues.descricao.trim(),
+                                valor: formValues.valor,
+                                data: formValues.data
+                            };
+
+                            const resCaixa = await window.api.salvarCaixa(entrada);
+                            if (resCaixa.ok) {
+                                Swal.fire('Entrada registrada com sucesso!', '', 'success').then(() => {
+                                    window.carregarPagina('ordemServiço/ordens_listagem.html');
+                                });
+                            } else {
+                                Swal.fire('Erro', 'A OS foi finalizada, mas houve erro ao salvar a entrada.', 'error');
+                            }
+                        } else {
+                            // Se usuário cancelar ou não confirmar a entrada, pode recarregar lista direto
+                            window.carregarPagina('ordemServiço/ordens_listagem.html');
+                        }
                     } else {
                         Swal.fire('Erro', 'Não foi possível finalizar a OS.', 'error');
                     }
+
+                    btn.disabled = false; // reabilita botão em caso de erro
+                }).catch(() => {
+                    Swal.fire('Erro', 'Falha na comunicação com o sistema.', 'error');
+                    document.getElementById('btnFinalizar').disabled = false;
                 });
             }
         });
