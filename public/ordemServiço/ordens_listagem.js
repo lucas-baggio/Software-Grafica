@@ -155,17 +155,16 @@
 
     const dataAtual = `${dia}/${mes}/${ano}`;
     const ordensMes = ordens.filter(os => {
-      if (!os.data_entrada) return false;
+      if (!os.created_at) return false;
 
-      const data = new Date(os.data_entrada);
+      const data = new Date(os.created_at);
       if (isNaN(data)) return false;
 
       const anoOS = data.getFullYear();
       const mesOS = data.getMonth() + 1;
 
-      return anoOS == ano && mesOS == parseInt(mes);
+      return anoOS === ano && mesOS === parseInt(mes);
     });
-
 
     const body = ordensMes.map(os => [
       os.id,
@@ -176,7 +175,11 @@
       os.status
     ]);
 
-    const totalMes = ordensMes.reduce((acc, os) => acc + os.total, 0);
+    const totalMes = ordensMes.reduce((acc, os) => {
+      const valor = parseFloat(os.total);
+      return acc + (isNaN(valor) ? 0 : valor);
+    }, 0);
+
 
     doc.setFontSize(16);
     doc.text('Gráfica - Relatório Mensal de Ordens de Serviço', 105, 15, { align: 'center' });
@@ -203,17 +206,24 @@
   });
 
   document.querySelector('.export-dia').addEventListener('click', async () => {
+    const { value: dataSelecionada } = await Swal.fire({
+      title: 'Selecione a data do relatório',
+      input: 'date',
+      inputLabel: 'Escolha uma data',
+      inputValue: new Date().toISOString().split('T')[0],
+      showCancelButton: true,
+      confirmButtonText: 'Gerar PDF',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!dataSelecionada) return;
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const hoje = new Date();
-    const dia = String(hoje.getDate()).padStart(2, '0');
-    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-    const ano = hoje.getFullYear();
-
-    const dataAtual = `${dia}/${mes}/${ano}`;
+    const [ano, mes, dia] = dataSelecionada.split('-');
     const dataComparacao = `${ano}-${mes}-${dia}`;
-    console.log(ordens);
+    const dataAtual = `${dia}/${mes}/${ano}`;
 
     const ordensDia = ordens.filter(os => {
       if (!os.created_at) return false;
@@ -234,7 +244,11 @@
       os.status
     ]);
 
-    const totalDia = ordensDia.reduce((acc, os) => acc + os.total, 0);
+    const totalDia = ordensDia.reduce((acc, os) => {
+      const raw = os.total?.toString().replace(',', '.');
+      const valor = parseFloat(raw);
+      return acc + (isNaN(valor) ? 0 : valor);
+    }, 0);
 
     doc.setFontSize(16);
     doc.text('Gráfica - Relatório Diário de Ordens de Serviço', 105, 15, { align: 'center' });
@@ -259,6 +273,7 @@
     const pdfBlob = doc.output('bloburl');
     window.open(pdfBlob);
   });
+
 
   window.excluir = function (id) {
     Swal.fire({
