@@ -1,5 +1,5 @@
 /node_modules
-/db/grafica.db
+db/db.js
 /grafica.db
 /dist
 /backups
