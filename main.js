@@ -255,18 +255,23 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
 ipcMain.handle('listar-os', async (_, params) => {
   const db = getPool();
 
+  const pagina = Number.isInteger(parseInt(params?.pagina)) ? parseInt(params.pagina) : 1;
+  const limite = Number.isInteger(parseInt(params?.limite)) ? parseInt(params.limite) : 20;
+  const offset = (pagina - 1) * limite;
+
   const filtros = [];
   const valores = [];
 
-  // Paginação
-  const pagina = parseInt(params?.pagina || 1);
-  const limite = parseInt(params?.limite || 20);
-  const offset = (pagina - 1) * limite;
-
-  // Filtros dinâmicos
   if (params?.cliente) {
-    filtros.push('c.nome_fantasia LIKE ?');
-    valores.push(`%${params.cliente}%`);
+    filtros.push('LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(' +
+      'c.nome_fantasia, "á", "a"), "à", "a"), "â", "a"), "ã", "a"), "é", "e"), "ê", "e"), "í", "i"), "ó", "o"), "ô", "o"), "ú", "u")) LIKE ?');
+
+    const clienteNormalizado = params.cliente
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+    valores.push(`%${clienteNormalizado}%`);
   }
 
   if (params?.entrada) {
@@ -281,43 +286,38 @@ ipcMain.handle('listar-os', async (_, params) => {
 
   const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
 
+  const query = `
+    SELECT 
+      os.id,
+      os.data_entrada,
+      os.data_entrega,
+      os.status,
+      os.created_at,
+      c.nome_fantasia AS cliente,
+      COALESCE(SUM(io.valor_total), 0) AS total
+    FROM ordens_servico os
+    JOIN clientes c ON c.id = os.cliente_id
+    LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
+    ${where}
+    GROUP BY 
+      os.id, os.data_entrada, os.data_entrega,
+      os.status, os.created_at, c.nome_fantasia
+    ORDER BY os.id DESC
+    LIMIT ${limite} OFFSET ${offset}
+  `;
+
+  const queryParams = [...valores]; // apenas os filtros
+
   try {
-    const query = `
-  SELECT 
-    os.id,
-    os.data_entrada,
-    os.data_entrega,
-    os.status,
-    os.created_at,
-    c.nome_fantasia AS cliente,
-    COALESCE(SUM(io.valor_total), 0) AS total
-  FROM ordens_servico os
-  JOIN clientes c ON c.id = os.cliente_id
-  LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
-  ${where}
-  GROUP BY 
-    os.id, os.data_entrada, os.data_entrega,
-    os.status, os.created_at, c.nome_fantasia
-  ORDER BY os.id DESC
-  LIMIT ${limite} OFFSET ${offset}
-`;
+    const [ordens] = await db.execute(query, queryParams);
 
-
-    // Adiciona os parâmetros de paginação no final
-    valores.push(limite, offset);
-
-    const [ordens] = await db.execute(query, valores);
-
-    // Total para paginação (sem LIMIT, sem GROUP BY)
     const countQuery = `
-      SELECT COUNT(*) AS total
+      SELECT COUNT(*) as total
       FROM ordens_servico os
       JOIN clientes c ON c.id = os.cliente_id
       ${where}
     `;
-    const [countResult] = await db.execute(countQuery, valores.slice(0, -2)); // remove LIMIT e OFFSET
-
-    const total = countResult[0]?.total || 0;
+    const [[{ total }]] = await db.execute(countQuery, valores); // mesma lógica
 
     return { ok: true, ordens, total };
   } catch (error) {
