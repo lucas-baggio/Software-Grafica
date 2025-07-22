@@ -5,6 +5,7 @@
   const telefone = document.getElementById('telefone');
   const telefoneFixo = document.getElementById('telefone_fixo');
   const cnpj = document.getElementById('cnpj');
+  const cpf = document.getElementById('cpf');
 
   // Máscara para celular
   IMask(telefone, {
@@ -19,6 +20,10 @@
   // Máscara para CNPJ
   IMask(cnpj, {
     mask: '00.000.000/0000-00'
+  });
+
+  IMask(cpf, {
+    mask: '000.000.000-00'
   });
 
   const clienteId = window.clienteEditId;

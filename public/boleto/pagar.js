@@ -65,18 +65,33 @@
             pagina: paginaAtual,
             limite: porPagina,
             fornecedor: filtrosAtuais.fornecedor || '',
-            data: filtrosAtuais.data || ''
+            data: filtrosAtuais.data || '',
+            status: filtrosAtuais.status || null
         };
 
         const { ok, dados = [], total = 0 } = await window.api.listarContasPagar(filtros);
         if (!ok) return alert('Erro ao carregar contas a pagar');
 
-        contas = dados;
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        contas = dados.map(conta => {
+            const vencimento = new Date(conta.vencimento);
+            vencimento.setHours(0, 0, 0, 0);
+
+            if (conta.status === 'Pendente' && vencimento < hoje) {
+                return { ...conta, status: 'Atrasado' };
+            }
+
+            return conta;
+        });
+
         totalPaginas = Math.ceil(total / porPagina) || 1;
 
         renderizarTabela();
         renderizarPaginacao();
     }
+
 
     window.visualizarConta = async (id) => {
         const conta = contas.find(c => c.id === id);
@@ -116,7 +131,7 @@
             html: `
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <input id="fornecedor" class="swal2-input" placeholder="Fornecedor" value="${conta.fornecedor_nome}" />
-                <input id="valor" class="swal2-input" placeholder="Valor" value="${formatarMoeda(conta.valor)}" />
+                <input id="valor" class="swal2-input" placeholder="Valor" value="${(parseFloat(conta.valor) || 0).toFixed(4).replace('.', ',')}" />
                 <input id="vencimento" type="date" class="swal2-input" value="${conta.vencimento ? new Date(conta.vencimento).toISOString().split('T')[0] : ''}" />
                 <textarea id="observacoes" class="swal2-textarea" placeholder="Observações">${conta.observacoes || ''}</textarea>
             </div>
@@ -127,33 +142,27 @@
             didOpen: () => {
                 const input = document.getElementById('valor');
 
-                input.addEventListener('input', () => {
-                    let valor = input.value.replace(/[^\d,]/g, '');
-
-                    const partes = valor.split(',');
-                    const parteInteira = partes[0];
-                    const parteDecimal = partes[1] ? partes[1].slice(0, 4) : '';
-                    const valorFormatado = parteDecimal ? `${parteInteira},${parteDecimal}` : parteInteira;
-
-                    const numero = parseFloat(valorFormatado.replace(',', '.'));
+                input.addEventListener('blur', () => {
+                    const raw = input.value.trim().replace(',', '.');
+                    const numero = parseFloat(raw);
 
                     if (!isNaN(numero)) {
                         input.value = numero.toFixed(4).replace('.', ',');
-                    } else {
-                        input.value = valorFormatado;
                     }
                 });
+
 
             },
             preConfirm: () => {
                 const raw = document.getElementById('valor').value.trim();
                 const valorLimpo = raw.replace(/[^\d,]/g, '').replace(',', '.');
-                const valor = parseFloat(raw.replace(',', '.')).toFixed(4);
-
-                if (isNaN(valor)) {
+                const numero = parseFloat(raw.replace(',', '.'));
+                if (isNaN(numero)) {
                     Swal.showValidationMessage('Valor inválido.');
                     return false;
                 }
+                const valor = numero.toFixed(4);
+
 
                 return {
                     id: conta.id,
@@ -201,6 +210,7 @@
     document.getElementById('btnAplicarFiltroPagar').addEventListener('click', () => {
         filtrosAtuais = {
             fornecedor: document.getElementById('filtroFornecedor').value,
+            status: document.getElementById('filtroStatus').value,
             data: document.getElementById('filtroDataVencimento').value
         };
         paginaAtual = 1;
@@ -211,6 +221,7 @@
         filtrosAtuais = {};
         document.getElementById('filtroFornecedor').value = '';
         document.getElementById('filtroDataVencimento').value = '';
+        document.getElementById('filtroStatus').value = 'Todos'
         paginaAtual = 1;
         carregarContas();
     });
@@ -319,5 +330,127 @@
         }
     });
 
+    document.querySelector('.export-boletos-pagar').addEventListener('click', async () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const hoje = new Date();
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const ano = hoje.getFullYear();
+        const dataAtual = `${dia}/${mes}/${ano}`;
+
+        const boletosMes = contas.filter(b => {
+            const data = new Date(b.created_at || b.vencimento);
+            if (isNaN(data)) return false;
+            return data.getFullYear() === ano && (data.getMonth() + 1) === parseInt(mes);
+        });
+
+        const body = boletosMes.map(b => [
+            b.id,
+            b.fornecedor_nome,
+            formatarData(b.vencimento),
+            b.status,
+            formatarMoeda(b.valor)
+        ]);
+
+        const totalMes = boletosMes.reduce((acc, b) => {
+            const valor = parseFloat(b.valor);
+            return acc + (isNaN(valor) ? 0 : valor);
+        }, 0);
+
+        doc.setFontSize(16);
+        doc.text('Relatório Mensal de Boletos a Pagar', 105, 15, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(`Emitido em: ${dataAtual}`, 15, 25);
+
+        doc.autoTable({
+            startY: 30,
+            head: [['ID', 'Fornecedor', 'Vencimento', 'Status', 'Valor (R$)']],
+            body,
+            theme: 'striped',
+            headStyles: { fillColor: [33, 150, 243], textColor: 255, halign: 'center' },
+            styles: { fontSize: 10, halign: 'center', cellPadding: 2 },
+            columnStyles: {
+                1: { halign: 'left' },
+                4: { halign: 'right' }
+            },
+            margin: { left: 10, right: 10 },
+            foot: [[
+                { content: `Total de Boletos: ${boletosMes.length}`, colSpan: 2, styles: { halign: 'left', fontStyle: 'bold' } },
+                { content: `Valor Total do Mês: ${formatarMoeda(totalMes)}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }
+            ]]
+        });
+
+        const pdfBlob = doc.output('bloburl');
+        window.open(pdfBlob);
+    });
+
+    document.querySelector('.export-boletos-pagar-dia').addEventListener('click', async () => {
+        const { value: dataSelecionada } = await Swal.fire({
+            title: 'Selecione a data do relatório',
+            input: 'date',
+            inputLabel: 'Escolha uma data',
+            inputValue: new Date().toISOString().split('T')[0],
+            showCancelButton: true,
+            confirmButtonText: 'Gerar PDF',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!dataSelecionada) return;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const [ano, mes, dia] = dataSelecionada.split('-');
+        const dataComparacao = `${ano}-${mes}-${dia}`;
+        const dataAtual = `${dia}/${mes}/${ano}`;
+
+        const boletosDia = contas.filter(b => {
+            const data = new Date(b.created_at || b.vencimento);
+            if (isNaN(data)) return false;
+            const dataFormatada = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+            return dataFormatada === dataComparacao;
+        });
+
+        const body = boletosDia.map(b => [
+            b.id,
+            b.fornecedor_nome,
+            formatarData(b.vencimento),
+            b.status,
+            formatarMoeda(b.valor)
+        ]);
+
+        const totalDia = boletosDia.reduce((acc, b) => {
+            const valor = parseFloat(b.valor);
+            return acc + (isNaN(valor) ? 0 : valor);
+        }, 0);
+
+        doc.setFontSize(16);
+        doc.text('Relatório Diário de Boletos a Pagar', 105, 15, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(`Emitido em: ${dataAtual}`, 15, 25);
+
+        doc.autoTable({
+            startY: 30,
+            head: [['ID', 'Fornecedor', 'Vencimento', 'Status', 'Valor (R$)']],
+            body,
+            theme: 'striped',
+            headStyles: { fillColor: [33, 150, 243], textColor: 255, halign: 'center' },
+            styles: { fontSize: 10, halign: 'center', cellPadding: 2 },
+            columnStyles: {
+                1: { halign: 'left' },
+                4: { halign: 'right' }
+            },
+            margin: { left: 10, right: 10 },
+            foot: [[
+                { content: `Total de Boletos: ${boletosDia.length}`, colSpan: 2, styles: { halign: 'left', fontStyle: 'bold' } },
+                { content: `Valor Total do Dia: ${formatarMoeda(totalDia)}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }
+            ]]
+        });
+
+        const pdfBlob = doc.output('bloburl');
+        window.open(pdfBlob);
+    });
 
 })();

@@ -72,7 +72,8 @@
             pagina: paginaAtual || 1,
             limite: porPagina || 10,
             cliente: filtrosAtuais.cliente,
-            data: filtrosAtuais.data
+            data: filtrosAtuais.data,
+            status: filtrosAtuais.status
         };
 
         const { ok, dados = [], total = 0 } = await window.api.buscarContasReceber(filtros);
@@ -82,7 +83,20 @@
             return;
         }
 
-        boletos = dados;
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        boletos = dados.map(boleto => {
+            const vencimento = new Date(boleto.vencimento);
+            vencimento.setHours(0, 0, 0, 0);
+
+            if (boleto.status === 'Pendente' && vencimento < hoje) {
+                return { ...boleto, status: 'Atrasado' };
+            }
+
+            return boleto;
+        });
+
         totalPaginas = Math.ceil(total / filtros.limite) || 1;
 
         renderizarTabela();
@@ -135,7 +149,7 @@
 
             <input id="valor" type="text" class="swal2-input" placeholder="Valor (ex: 150,75)"
                    style="width: 80%; margin: 0 auto; display: block;"
-                   value="${boleto.valor?.toString().replace('.', ',') || ''}" />
+                   value="${(parseFloat(boleto.valor) || 0).toFixed(4).replace('.', ',')}" />
 
             <input id="vencimento" type="date" class="swal2-input"
                    style="width: 80%; margin: 0 auto; display: block;"
@@ -198,7 +212,8 @@
     document.getElementById('btnAplicarFiltro').addEventListener('click', () => {
         filtrosAtuais = {
             cliente: document.getElementById('filtroCliente').value.trim() || null,
-            data: document.getElementById('filtroDataVencimento').value || null
+            data: document.getElementById('filtroDataVencimento').value || null,
+            status: document.getElementById('filtroStatus').value || null
         };
         paginaAtual = 1;
         carregarBoletos();
@@ -208,6 +223,7 @@
         filtrosAtuais = {};
         document.getElementById('filtroCliente').value = '';
         document.getElementById('filtroDataVencimento').value = '';
+        document.getElementById('filtroStatus').value = 'Todos'
         paginaAtual = 1;
         carregarBoletos();
     });
@@ -340,5 +356,130 @@
             }
         }
     };
+
+    document.querySelector('.export-boletos').addEventListener('click', async () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const hoje = new Date();
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const ano = hoje.getFullYear();
+        const dataAtual = `${dia}/${mes}/${ano}`;
+
+        const boletosMes = boletos.filter(b => {
+            const data = new Date(b.created_at || b.vencimento);
+            if (isNaN(data)) return false;
+            return data.getFullYear() === ano && (data.getMonth() + 1) === parseInt(mes);
+        });
+
+        const body = boletosMes.map(b => [
+            b.id,
+            b.cliente_nome,
+            formatarData(b.vencimento),
+            b.status,
+            formatarMoeda(b.valor)
+        ]);
+
+        const totalMes = boletosMes.reduce((acc, b) => {
+            const valor = parseFloat(b.valor);
+            return acc + (isNaN(valor) ? 0 : valor);
+        }, 0);
+
+        doc.setFontSize(16);
+        doc.text('Relatório Mensal de Boletos', 105, 15, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(`Emitido em: ${dataAtual}`, 15, 25);
+
+        doc.autoTable({
+            startY: 30,
+            head: [['ID', 'Cliente', 'Vencimento', 'Status', 'Valor (R$)']],
+            body,
+            theme: 'striped',
+            headStyles: { fillColor: [33, 150, 243], textColor: 255, halign: 'center' },
+            styles: { fontSize: 10, halign: 'center', cellPadding: 2 },
+            columnStyles: {
+                1: { halign: 'left' },
+                4: { halign: 'right' }
+            },
+            margin: { left: 10, right: 10 },
+            foot: [[
+                { content: `Total de Boletos: ${boletosMes.length}`, colSpan: 2, styles: { halign: 'left', fontStyle: 'bold' } },
+                { content: `Valor Total do Mês: ${formatarMoeda(totalMes)}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }
+            ]]
+        });
+
+        const pdfBlob = doc.output('bloburl');
+        window.open(pdfBlob);
+    });
+
+
+    document.querySelector('.export-boletos-dia').addEventListener('click', async () => {
+        const { value: dataSelecionada } = await Swal.fire({
+            title: 'Selecione a data do relatório',
+            input: 'date',
+            inputLabel: 'Escolha uma data',
+            inputValue: new Date().toISOString().split('T')[0],
+            showCancelButton: true,
+            confirmButtonText: 'Gerar PDF',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!dataSelecionada) return;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const [ano, mes, dia] = dataSelecionada.split('-');
+        const dataComparacao = `${ano}-${mes}-${dia}`;
+        const dataAtual = `${dia}/${mes}/${ano}`;
+
+        const boletosDia = boletos.filter(b => {
+            const data = new Date(b.created_at || b.vencimento);
+            if (isNaN(data)) return false;
+            const dataCriacao = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+            return dataCriacao === dataComparacao;
+        });
+
+        const body = boletosDia.map(b => [
+            b.id,
+            b.cliente_nome,
+            formatarData(b.vencimento),
+            b.status,
+            formatarMoeda(b.valor)
+        ]);
+
+        const totalDia = boletosDia.reduce((acc, b) => {
+            const valor = parseFloat(b.valor);
+            return acc + (isNaN(valor) ? 0 : valor);
+        }, 0);
+
+        doc.setFontSize(16);
+        doc.text('Relatório Diário de Boletos', 105, 15, { align: 'center' });
+        doc.setFontSize(11);
+        doc.text(`Emitido em: ${dataAtual}`, 15, 25);
+
+        doc.autoTable({
+            startY: 30,
+            head: [['ID', 'Cliente', 'Vencimento', 'Status', 'Valor (R$)']],
+            body,
+            theme: 'striped',
+            headStyles: { fillColor: [33, 150, 243], textColor: 255, halign: 'center' },
+            styles: { fontSize: 10, halign: 'center', cellPadding: 2 },
+            columnStyles: {
+                1: { halign: 'left' },
+                4: { halign: 'right' }
+            },
+            margin: { left: 10, right: 10 },
+            foot: [[
+                { content: `Total de Boletos: ${boletosDia.length}`, colSpan: 2, styles: { halign: 'left', fontStyle: 'bold' } },
+                { content: `Valor Total do Dia: ${formatarMoeda(totalDia)}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }
+            ]]
+        });
+
+        const pdfBlob = doc.output('bloburl');
+        window.open(pdfBlob);
+    });
+
 
 })();

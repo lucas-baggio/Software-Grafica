@@ -86,8 +86,8 @@ ipcMain.handle('salvar-cliente', async (_, dados) => {
 
   const query = `INSERT INTO clientes (
     nome_fantasia, razao_social, endereco, bairro,
-    cidade, uf, telefone, telefone_fixo, inscricao_estadual, cnpj
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    cidade, uf, telefone, telefone_fixo, cpf, inscricao_estadual, cnpj
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   const [result] = await db.execute(query, [
     dados.nome_fantasia,
@@ -98,8 +98,9 @@ ipcMain.handle('salvar-cliente', async (_, dados) => {
     dados.uf,
     dados.telefone,
     dados.telefone_fixo,
+    dados.cpf,
     dados.inscricao_estadual,
-    dados.cnpj
+    dados.cnpj,
   ]);
 
   return { ok: true, id: result.insertId };
@@ -134,7 +135,7 @@ ipcMain.handle('buscar-clientes', async (_, params) => {
   const where = filtros.length > 0 ? `WHERE ${filtros.join(' AND ')}` : '';
 
   const query = `
-  SELECT id, nome_fantasia, cnpj, telefone, telefone_fixo, razao_social
+  SELECT id, nome_fantasia, cnpj, cpf, telefone, telefone_fixo, razao_social
   FROM clientes
   ${where}
   ORDER BY nome_fantasia ASC
@@ -177,7 +178,7 @@ ipcMain.handle('atualizar-cliente', async (_, cliente) => {
   const query = `
     UPDATE clientes SET
       nome_fantasia = ?, razao_social = ?, endereco = ?, bairro = ?, cidade = ?, uf = ?,
-      telefone = ?, inscricao_estadual = ?, cnpj = ?
+      telefone = ?, inscricao_estadual = ?, cnpj = ?, cpf = ?
     WHERE id = ?
   `;
   await db.execute(query, [
@@ -718,9 +719,25 @@ ipcMain.handle('listar-contas-receber', async (_, filtros = {}) => {
   const where = [];
   const params = [];
 
+  // Normalização no JS
+  const normalizarTexto = (texto) =>
+    texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
   if (filtros.cliente) {
-    where.push(`cr.cliente_nome LIKE ?`);
-    params.push(`%${filtros.cliente}%`);
+    where.push(`
+      LOWER(
+        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+          cr.cliente_nome,
+          'á','a'),'à','a'),'â','a'),'ã','a'),'é','e'),'ê','e'),'í','i'),'ó','o'),'ô','o'),'ú','u')
+      )
+      LIKE ?
+    `);
+    params.push(`%${normalizarTexto(filtros.cliente)}%`);
+  }
+
+  if (filtros.status) {
+    where.push(`cr.status = ?`);
+    params.push(filtros.status);
   }
 
   if (filtros.status) {
@@ -766,6 +783,7 @@ ipcMain.handle('listar-contas-receber', async (_, filtros = {}) => {
     return { ok: false, dados: [], total: 0 };
   }
 });
+
 
 
 ipcMain.handle('receber-conta', async (_, id) => {
@@ -861,9 +879,21 @@ ipcMain.handle('listar-contas-pagar', async (_, filtros = {}) => {
   const where = [];
   const params = [];
 
+  // Função de normalização no JS
+  const normalizarTexto = (texto) =>
+    texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  // Filtro por fornecedor com tratamento de acentos no SQL e JS
   if (filtros.fornecedor) {
-    where.push(`cp.fornecedor_nome LIKE ?`);
-    params.push(`%${filtros.fornecedor}%`);
+    where.push(`
+      LOWER(
+        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+          cp.fornecedor_nome,
+          'á','a'),'à','a'),'â','a'),'ã','a'),'é','e'),'ê','e'),'í','i'),'ó','o'),'ô','o'),'ú','u')
+      )
+      LIKE ?
+    `);
+    params.push(`%${normalizarTexto(filtros.fornecedor)}%`);
   }
 
   if (filtros.status) {
@@ -909,6 +939,7 @@ ipcMain.handle('listar-contas-pagar', async (_, filtros = {}) => {
     return { ok: false, dados: [], total: 0 };
   }
 });
+
 
 
 ipcMain.handle('pagar-conta', async (_, id) => {

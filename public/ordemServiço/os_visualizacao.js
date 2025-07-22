@@ -89,7 +89,7 @@
         doc.addImage(emailDataURL, 'PNG', margem + 50, y + 19, 4, 4);
         doc.text("graficaimage@graficaimage.com.br", margem + 55, y + 22);
         doc.addImage(pingDataURL, 'PNG', margem + 50, y + 24, 4, 4);
-        doc.text("Rua 27 nº 739 – Centro – Santa Fé do Sul/SP", margem + 55, y + 27);
+        doc.text("Rua 27 nº 739 – Centro – Santa Fé do Sul/SP - 15775-000", margem + 55, y + 27);
 
         doc.setDrawColor(0);
         doc.setLineWidth(0.5);
@@ -253,36 +253,44 @@
         doc.setLineWidth(0.4);
 
         for (const item of itens) {
-            if (y + alturaLinha > alturaUtilPagina - alturaLinha * 2) {
+            const larguraMaximaDescricao = 97;
+            const linhasDescricao = doc.splitTextToSize(item.descricao.toUpperCase(), larguraMaximaDescricao);
+            const alturaItem = linhasDescricao.length * alturaLinha;
+
+            // Quebra de página se necessário
+            if (y + alturaItem > alturaUtilPagina - alturaLinha * 2) {
                 doc.addPage();
                 y = margem;
                 doc.rect(margem, margem, larguraPagina - 1, 277);
                 desenharCabecalho();
             }
 
-            // Linhas horizontais (superior e inferior da célula)
-            doc.line(margem, y, margem + larguraPagina - 1, y); // linha superior
-            doc.line(margem, y + alturaLinha, margem + larguraPagina - 1, y + alturaLinha); // linha inferior
-
-            // Linhas verticais (divisórias e bordas laterais)
-            doc.line(margem, y, margem, y + alturaLinha); // borda esquerda
-            doc.line(colX[1], y, colX[1], y + alturaLinha);
-            doc.line(colX[2], y, colX[2], y + alturaLinha);
-            doc.line(colX[3], y, colX[3], y + alturaLinha);
-            doc.line(colX[3] + 40, y, colX[3] + 40, y + alturaLinha); // borda direita, ajuste se sua última coluna for menor/maior
-
-
-            const larguraMaximaDescricao = 97; // margem segura
-            const desc = truncarTexto(doc, item.descricao.toUpperCase(), larguraMaximaDescricao);
             const valorTotal = item.quantidade * item.valor_unitario;
             total += valorTotal;
 
+            // Bordas horizontais
+            doc.line(margem, y, margem + larguraPagina - 1, y); // topo
+            doc.line(margem, y + alturaItem, margem + larguraPagina - 1, y + alturaItem); // base
+
+            // Bordas verticais
+            doc.line(margem, y, margem, y + alturaItem); // esquerda
+            doc.line(colX[1], y, colX[1], y + alturaItem);
+            doc.line(colX[2], y, colX[2], y + alturaItem);
+            doc.line(colX[3], y, colX[3], y + alturaItem);
+            doc.line(colX[3] + 40, y, colX[3] + 40, y + alturaItem); // direita
+
+            // Textos
+            doc.setFont("helvetica", "normal");
             doc.text(String(item.quantidade), colX[0] + 2, y + 5);
-            doc.text(desc, colX[1] + 2, y + 5);
+            linhasDescricao.forEach((linha, i) => {
+                doc.text(linha, colX[1] + 2, y + 5 + i * alturaLinha);
+            });
             doc.text(formatarValor(item.valor_unitario), colX[2] + 2, y + 5);
             doc.text(formatarValor(valorTotal), colX[3] + 2, y + 5);
-            y += alturaLinha;
+
+            y += alturaItem;
         }
+
 
         // Total com fundo bold e borda arredondada inferior
         if (y + alturaLinha > alturaUtilPagina) {

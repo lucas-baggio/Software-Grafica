@@ -4,13 +4,21 @@
 
     <div id="filtrosContainer" class="filtros-os" style="display: none;">
       <div class="row">
-        <div class="col-6">
+        <div class="col-4">
           <label for="filtroCliente">Cliente:</label>
           <input type="text" id="filtroCliente" placeholder="Nome do cliente">
         </div>
-        <div class="col-6">
+        <div class="col-4">
           <label for="filtroDataVencimento">Data de Vencimento:</label>
           <input type="date" id="filtroDataVencimento">
+        </div>
+        <div class="col-4">
+          <label for="filtroStatus">Status:</label>
+          <select id="filtroStatus">
+            <option value="">Todos</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Recebido">Recebido</option>
+          </select>
         </div>
       </div>
       <div class="botoes-filtro">
@@ -22,6 +30,8 @@
     <div class="actions">
       <button class="filter">Filtros</button>
       <button id="btnAdicionarBoleto" class="adicionar">Adicionar Boleto</button>
+      <button class="export-boletos export">Gerar Relatório - Mensal</button>
+      <button class="export-boletos-dia">Gerar Relatório - Diário</button>
     </div>
 
     <table class="tabela-os">
