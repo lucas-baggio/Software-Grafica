@@ -123,8 +123,22 @@
             return linhas.length * alturaLinha;
         }
 
+        const dataEntradaStr = formatarData(os.data_entrada) || "---";
+        const dataEntregaStr = formatarData(os.data_entrega) || "---";
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(`Data Entrada: ${dataEntradaStr}`, margem + 2, yDados + 1);
+        doc.text(`Data Entrega: ${dataEntregaStr}`, margem + 62, yDados + 1);
+        doc.text(`Condições de Pagamento: ${os.condicoes_pagamento?.toUpperCase() || "---"}`, margem + 114, yDados + 1);
+        yDados += 8; // Espaço após as datas
+
         // Escreve os campos com quebra e atualiza yDados conforme o conteúdo cresce
         yDados += escreverCampoComQuebra("Nome Fantasia:", cliente.nome_fantasia?.toUpperCase(), yDados, margem + 2, margem + 50);
+
+        // Escreve as datas logo abaixo do Nome Fantasia
+        
+
+        // Continua com os outros campos normalmente
         yDados += escreverCampoComQuebra("Razão Social:", cliente.razao_social?.toUpperCase(), yDados, margem + 2, margem + 50);
         yDados += escreverCampoComQuebra("Endereço:", cliente.endereco?.toUpperCase(), yDados, margem + 2, margem + 50);
         yDados += escreverCampoComQuebra("Bairro:", cliente.bairro?.toUpperCase(), yDados, margem + 2, margem + 50);
@@ -155,16 +169,8 @@
             doc.text(valor || '---', xValor, y + offsetY);
         };
 
-
-
-        // Campos de data e condição de pagamento
-        escreverLinha("Data Entrada:", formatarData(os.data_entrada), yDados - y + 2, margem + 2, margem + 2, "bold");
-        escreverLinha("Data Entrega:", formatarData(os.data_entrega), yDados - y + 2, margem + 62, margem + 62, "bold");
-        escreverLinha("Condições de Pagamento:", os.condicoes_pagamento?.toUpperCase(), yDados - y + 2, margem + 114, margem + 114, "normal");
-
-
         // Atualiza y global
-        y = yDados + 10;
+        y = yDados + 5;
 
 
         function desenharCabecalhoPerfeito(x, y, largura, altura, raio = 2, segmentos = 12) {
@@ -376,7 +382,8 @@
             ["Só colado:", os.so_colado],
             ["Numeração:", os.numeracao],
             ["Prova", os.prova],
-            ["Alteração", os.alteracao]
+            ["Alteração", os.alteracao],
+            ["Frente e Verso:", os.FV],
         ];
 
         // Transforma os valores: booleans para "Sim"/"Não", nulls para "--"
@@ -536,6 +543,7 @@
         document.getElementById('os_adesivo').textContent = boolToSimNao(os.adesivo);
         document.getElementById('os_numeracao').textContent = os.numeracao || '-';
         document.getElementById('os_observacao').textContent = os.observacao || '-';
+        document.getElementById('os_fv').textContent = os.FV || '-';
 
         const tbody = document.getElementById('itens_os');
         itens.forEach(item => {

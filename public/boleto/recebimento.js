@@ -135,6 +135,86 @@
     };
 
 
+    // CRIAR BOLETO
+    document.getElementById('btnAdicionarBoleto').addEventListener('click', async () => {
+        const { value: formValues } = await Swal.fire({
+            title: 'Adicionar Boleto',
+            html: `
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <input id="cliente" class="swal2-input" placeholder="Nome do Cliente" style="width: 80%; margin: 0 auto; display: block;" />
+            <input id="valor" type="text" class="swal2-input" placeholder="Valor (ex: 150,75)" style="width: 80%; margin: 0 auto; display: block;" />
+            <input id="vencimento" type="date" class="swal2-input" style="width: 80%; margin: 0 auto; display: block;" />
+            <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
+                <option value="Pendente" selected>Pendente</option>
+                <option value="Recebido">Recebido</option>
+                <option value="Atrasado">Atrasado</option>
+            </select>
+            <textarea id="observacao" class="swal2-textarea" placeholder="Observações (opcional)" style="width: 80%; resize: vertical; margin: 0 auto; display: block;"></textarea>
+        </div>`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar',
+
+            didOpen: () => {
+                aplicarMascaraValor(document.getElementById('valor'));
+            },
+
+            preConfirm: () => {
+                const cliente = document.getElementById('cliente')?.value.trim() || document.getElementById('cliente_nome')?.value.trim();
+                const raw = document.getElementById('valor').value.trim();
+                const vencimento = document.getElementById('vencimento')?.value || document.getElementById('data_vencimento')?.value;
+                const observacao = document.getElementById('observacao')?.value || document.getElementById('observacoes')?.value;
+                const status = document.getElementById('status')?.value || 'Pendente';
+
+                const regex = /^\d+(,\d{0,4})?$/;
+                if (!regex.test(raw)) {
+                    Swal.showValidationMessage('Valor inválido. Use até 4 casas decimais.');
+                    return false;
+                }
+
+                const valor = parseFloat(raw.replace(',', '.'));
+
+                if (!cliente || isNaN(valor) || !vencimento) {
+                    Swal.showValidationMessage('Preencha todos os campos corretamente.');
+                    return false;
+                }
+
+                return {
+                    cliente_nome: cliente,
+                    valor,
+                    vencimento,
+                    observacao,
+                    status
+                };
+            }
+        });
+
+        if (!formValues) return;
+
+        const payload = {
+            cliente_nome: formValues.cliente_nome,
+            valor: formValues.valor,
+            vencimento: formValues.vencimento,
+            status: formValues.status || 'Pendente',
+            observacao: formValues.observacao || null
+        };
+
+        try {
+            const res = await window.api.salvarContaReceber(payload);
+            if (res.ok) {
+                Swal.fire('Sucesso!', 'Boleto salvo com sucesso.', 'success');
+                carregarBoletos();
+            } else {
+                throw new Error(res.error || 'Erro desconhecido.');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Erro', 'Falha ao salvar o boleto.', 'error');
+        }
+    });
+
+    // EDITAR BOLETO
     window.editarBoleto = async (id) => {
         const boleto = boletos.find(b => b.id === id);
         if (!boleto) return;
@@ -155,6 +235,12 @@
                    style="width: 80%; margin: 0 auto; display: block;"
                    value="${boleto.vencimento ? new Date(boleto.vencimento).toISOString().split('T')[0] : ''}" />
 
+            <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
+                <option value="Pendente" ${boleto.status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+                <option value="Recebido" ${boleto.status === 'Recebido' ? 'selected' : ''}>Recebido</option>
+                <option value="Atrasado" ${boleto.status === 'Atrasado' ? 'selected' : ''}>Atrasado</option>
+            </select>
+
             <textarea id="observacao" class="swal2-textarea" placeholder="Observações (opcional)"
                       style="width: 80%; resize: vertical; margin: 0 auto; display: block;">${boleto.observacoes || ''}</textarea>
         </div>`,
@@ -172,6 +258,7 @@
                 const raw = document.getElementById('valor').value.trim();
                 const vencimento = document.getElementById('vencimento').value;
                 const observacao = document.getElementById('observacao').value;
+                const status = document.getElementById('status').value;
 
                 const regex = /^\d+(,\d{0,4})?$/;
                 if (!regex.test(raw)) {
@@ -192,7 +279,7 @@
                     valor,
                     vencimento,
                     observacao,
-                    status: boleto.status
+                    status // <-- pega o status selecionado
                 };
             }
         });
@@ -265,6 +352,7 @@
             <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
                 <option value="Pendente" selected>Pendente</option>
                 <option value="Recebido">Recebido</option>
+                <option value="Atrasado">Atrasado</option>
             </select>
             <textarea id="observacao" class="swal2-textarea" placeholder="Observações (opcional)" style="width: 80%; resize: vertical; margin: 0 auto; display: block;"></textarea>
         </div>`,

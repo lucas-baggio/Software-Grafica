@@ -212,8 +212,8 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
   const insertOS = `INSERT INTO ordens_servico (
     cliente_id, data_entrada, data_entrega, alteracao, mostrar_prova, cores,
     sulfite, duplex, couche, adesivo, bond, copiativo, vias, formato,
-    picotar, so_colado, numeracao, condicoes_pagamento, observacao
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    picotar, so_colado, numeracao, condicoes_pagamento, observacao, FV
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   const [osResult] = await db.execute(insertOS, [
     os.cliente_id,
@@ -234,7 +234,8 @@ ipcMain.handle('salvar-os', async (_, { os, itens }) => {
     os.so_colado || null,
     os.numeracao || null,
     os.condicoes_pagamento,
-    os.observacao
+    os.observacao,
+    os.FV || null
   ]);
 
   const ordemId = osResult.insertId;
@@ -360,7 +361,7 @@ ipcMain.handle('atualizar-os', async (_, { id, os, itens }) => {
   UPDATE ordens_servico SET
     cliente_id = ?, data_entrada = ?, data_entrega = ?, alteracao = ?, mostrar_prova = ?, cores = ?,
     sulfite = ?, duplex = ?, couche = ?, adesivo = ?, bond = ?, copiativo = ?, vias = ?, formato = ?,
-    picotar = ?, so_colado = ?, numeracao = ?, condicoes_pagamento = ?, observacao = ?
+    picotar = ?, so_colado = ?, numeracao = ?, condicoes_pagamento = ?, observacao = ?, FV = ?
   WHERE id = ?
 `, [
     os.cliente_id ?? null,
@@ -382,6 +383,7 @@ ipcMain.handle('atualizar-os', async (_, { id, os, itens }) => {
     os.numeracao || null,
     os.condicoes_pagamento || null,
     os.observacao,
+    os.FV || null,
     id
   ]);
 
@@ -825,9 +827,9 @@ ipcMain.handle('atualizar-conta-receber', async (_, dados) => {
     dados.cliente_nome ?? null,
     dados.valor ?? null,
     dados.vencimento ?? null,
-    dados.data_recebimento ?? null,
+    dados.data_recebimento ?? null, // garanta que existe, ou use '' se preferir
     dados.status ?? null,
-    dados.observacao ?? null,
+    dados.observacao ?? dados.observacoes ?? null, // aceita ambos
     dados.id ?? null
   ];
 

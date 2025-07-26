@@ -133,6 +133,11 @@
                 <input id="fornecedor" class="swal2-input" placeholder="Fornecedor" value="${conta.fornecedor_nome}" />
                 <input id="valor" class="swal2-input" placeholder="Valor" value="${(parseFloat(conta.valor) || 0).toFixed(4).replace('.', ',')}" />
                 <input id="vencimento" type="date" class="swal2-input" value="${conta.vencimento ? new Date(conta.vencimento).toISOString().split('T')[0] : ''}" />
+                <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
+                    <option value="Pendente" ${conta.status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+                    <option value="Pago" ${conta.status === 'Pago' ? 'selected' : ''}>Pago</option>
+                    <option value="Atrasado" ${conta.status === 'Atrasado' ? 'selected' : ''}>Atrasado</option>
+                </select>
                 <textarea id="observacoes" class="swal2-textarea" placeholder="Observações">${conta.observacoes || ''}</textarea>
             </div>
         `,
@@ -141,17 +146,13 @@
             focusConfirm: false,
             didOpen: () => {
                 const input = document.getElementById('valor');
-
                 input.addEventListener('blur', () => {
                     const raw = input.value.trim().replace(',', '.');
                     const numero = parseFloat(raw);
-
                     if (!isNaN(numero)) {
                         input.value = numero.toFixed(4).replace('.', ',');
                     }
                 });
-
-
             },
             preConfirm: () => {
                 const raw = document.getElementById('valor').value.trim();
@@ -170,7 +171,7 @@
                     valor,
                     vencimento: document.getElementById('vencimento').value,
                     observacao: document.getElementById('observacoes').value,
-                    status: conta.status
+                    status: document.getElementById('status').value // <-- pega o status selecionado
                 };
             }
         });
@@ -250,6 +251,7 @@
                 <select id="status" style="width: 80%; height: 50px; padding: 0 12px; font-size: 1.125em; border: 1px solid #d9d9d9; border-radius: 5px; outline: none; font-family: inherit; box-sizing: border-box; margin: 0 auto; display: block;">
                     <option value="Pendente" selected>Pendente</option>
                     <option value="Pago">Pago</option>
+                    <option value="Atrasado">Atrasado</option>
                 </select>
                 <textarea id="observacao" class="swal2-textarea" placeholder="Observações (opcional)" style="width: 80%; resize: vertical; margin: 0 auto; display: block;"></textarea>
             </div>`,

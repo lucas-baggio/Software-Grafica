@@ -96,6 +96,7 @@
       formOS.condicoes_pagamento.value = os.condicoes_pagamento;
       formOS.numeracao.value = os.numeracao;
       formOS.observacao.value = os.observacao;
+      formOS.FV.value = os.FV;
 
       formOS.copiativo.checked = !!os.copiativo;
       formOS.adesivo.checked = !!os.adesivo;
@@ -237,6 +238,7 @@
     os.so_colado = formOS.so_colado.checked ? 1 : 0;
     os.adesivo = formOS.adesivo.checked ? 1 : 0;
     os.vias = formOS.vias.value || "";
+    os.FV = formOS.FV.value || "";
     os.observacao = formOS.observacao.value || "";
 
     const itens = Array.from(itensDOM).map(item => {
