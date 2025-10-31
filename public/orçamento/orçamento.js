@@ -197,6 +197,7 @@
     const payload = {
       orcamento: {
         cliente_nome,
+        cliente_id,
         cliente_cnpj,
         observacoes
       },
@@ -238,32 +239,38 @@
     const ano = hoje.getFullYear();
     const dataFormatada = `${dia}/${mes}/${ano}`;
 
+    // --- helper de campo com quebra (LABEL: valor) ---
+    function escreverCampoComQuebra(label, valor, y, xLabel = 20, xValue = 60) {
+      const d = escreverCampoComQuebra.doc;
+      const texto = (valor && String(valor).trim()) ? String(valor).toUpperCase() : '--';
+      const maxWidth = 120; // largura do valor
+      const linhas = d.splitTextToSize(texto, maxWidth);
 
+      d.setFont('helvetica', 'bold');
+      d.text(label, xLabel, y);
+
+      d.setFont('helvetica', 'normal');
+      d.text(linhas, xValue, y);
+
+      return y + (linhas.length * 6); // avança Y conforme quebras
+    }
+    escreverCampoComQuebra.doc = doc;
+
+    // --- barras e logos do cabeçalho (sem mudança) ---
     doc.setFillColor(255, 204, 0);
     doc.rect(0, 0, 5, 297, 'F');
     doc.setFillColor(0);
     doc.rect(5, 0, 2, 297, 'F');
-
     doc.setFillColor(255, 204, 0);
     doc.rect(200, 0, 3, 50, 'F');
 
-
     const logoPath = window.api.join(window.api.appPath, 'logo.png');
     const logoBase64 = window.api.readFileBase64(logoPath);
-    const logoDataURL = `data:image/png;base64,${logoBase64}`;
-    doc.addImage(logoDataURL, 'PNG', 20, 10, 60, 45);
+    doc.addImage(`data:image/png;base64,${logoBase64}`, 'PNG', 20, 10, 60, 45);
 
-    const whatsappPath = window.api.join(window.api.appPath, 'whatsapp.png');
-    const whatsappBase64 = window.api.readFileBase64(whatsappPath);
-    const whatsappDataURL = `data:image/png;base64,${whatsappBase64}`;
-
-    const emailPath = window.api.join(window.api.appPath, 'email.png');
-    const emailBase64 = window.api.readFileBase64(emailPath);
-    const emailDataURL = `data:image/png;base64,${emailBase64}`;
-
-    const pingPath = window.api.join(window.api.appPath, 'ping.png');
-    const pingBase64 = window.api.readFileBase64(pingPath);
-    const pingDataURL = `data:image/png;base64,${pingBase64}`
+    const whatsappBase64 = window.api.readFileBase64(window.api.join(window.api.appPath, 'whatsapp.png'));
+    const emailBase64 = window.api.readFileBase64(window.api.join(window.api.appPath, 'email.png'));
+    const pingBase64 = window.api.readFileBase64(window.api.join(window.api.appPath, 'ping.png'));
 
     doc.setFont('times', 'italic');
     doc.setFontSize(12);
@@ -276,56 +283,112 @@
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.addImage(whatsappDataURL, 'PNG', 157, 36, 3, 3);
+    doc.addImage(`data:image/png;base64,${whatsappBase64}`, 'PNG', 157, 36, 3, 3);
     doc.text('(17) 3631-4165', 190, 39, { align: 'right' });
 
-    doc.addImage(emailDataURL, 'PNG', 120, 41, 3, 3);
+    doc.addImage(`data:image/png;base64,${emailBase64}`, 'PNG', 120, 41, 3, 3);
     doc.text('graficaimage@graficaimage.com.br', 190, 44, { align: 'right' });
 
-    doc.addImage(pingDataURL, 'PNG', 102, 46, 3, 3);
+    doc.addImage(`data:image/png;base64,${pingBase64}`, 'PNG', 102, 46, 3, 3);
     doc.text('Rua 27 nº 739 - Centro - Santa Fé do Sul/SP', 190, 49, { align: 'right' });
 
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text(`Data de Emissão: ${dataFormatada}`, 190, 54, { align: 'right' });
+    // 🔹 REMOVIDO: a "Data de Emissão" no cabeçalho (ficava colada no topo)
+    // doc.setFont('helvetica', 'italic');
+    // doc.setFontSize(10);
+    // doc.text(`Data de Emissão: ${dataFormatada}`, 190, 54, { align: 'right' });
 
+    const clienteId = document.getElementById('clienteSelect')?.value;
+    let yDados = 90; // desce bem abaixo do cabeçalho
 
+    // --- Nome do cliente + Data na MESMA LINHA ---
     const clienteNome = document.getElementById('clienteSelect')?.selectedOptions[0]?.textContent?.trim().toUpperCase() || 'CLIENTE';
-
     doc.setFontSize(12);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(clienteNome, 100, 105, { align: 'center' });
+    // Nome alinhado à esquerda
+    doc.text(clienteNome, 20, yDados);
+    // Data alinhada à direita, na mesma altura
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.text(`Data: ${dataFormatada}`, 190, yDados, { align: 'right' });
 
+    yDados += 8; // um pequeno respiro
 
-    const itens = Array.from(document.querySelectorAll('.item')).map((itemEl, idx) => {
+    // --- Dados do cliente / Endereço ---
+    let cliente = null;
+    if (clienteId) {
+      cliente = await window.api.buscarClientePorId(clienteId);
+    }
+
+    if (cliente) {
+      // monta o endereço completo com o que existir
+      const partes = [
+        cliente.endereco,            // ex: "Estrada Municipal S/N"
+        cliente.numero,              // ex: "123"
+        cliente.complemento,         // ex: "Rural"
+        cliente.bairro,
+        cliente.cidade && cliente.uf ? `${cliente.cidade}/${cliente.uf}` : (cliente.cidade || cliente.uf),
+        cliente.cep && `CEP: ${cliente.cep}`
+      ].filter(Boolean);
+
+      const enderecoCompleto = partes.join(', ').replace(/,\s*,/g, ', ').toUpperCase();
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const maxWidth = 160;
+      const linhas = doc.splitTextToSize(enderecoCompleto, maxWidth);
+      doc.text(linhas, 20, yDados);
+      yDados += linhas.length * 6;
+    }
+
+    // --- Tabela de itens ---
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+
+    const itens = [];
+    let contadorItem = 1;
+    
+    Array.from(document.querySelectorAll('.item')).forEach((itemEl) => {
       const qtdInput = itemEl.querySelector('.quantidade');
       const descInput = itemEl.querySelector('.descricao');
       const valorInput = itemEl.querySelector('.valor_unitario');
-      if (!qtdInput || !descInput || !valorInput) return null;
+      if (!qtdInput || !descInput || !valorInput) return;
 
-      const qtd = qtdInput.value;
-      const desc = descInput.value;
-      const valor = parseFloat(valorInput.value || 0);
+      const qtd = parseFloat(qtdInput.value || '0');
+      const desc = (descInput.value || '').trim();
+      const valor = parseFloat((valorInput.value || '0').replace(',', '.'));
+      if (!qtd || !desc || !valor) return;
+
       const total = qtd * valor;
-
-      return [
-        String(idx + 1).padStart(2, '0'),
-        qtd,
+      itens.push([
+        String(contadorItem).padStart(2, '0'),
+        qtd.toString(),
         desc,
-        valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-        total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      ];
-    }).filter(item => item !== null);
+        `R$ ${valor.toFixed(4).replace('.', ',')}`,
+        `R$ ${total.toFixed(4).replace('.', ',')}`
+      ]);
+      contadorItem++;
+    });
+
+    const totalGeral = itens.reduce((acc, curr) => {
+      const valorStr = curr[4];
+      const numero = parseFloat(valorStr.replace(/[^\d,-]+/g, '').replace(',', '.'));
+      return acc + (isNaN(numero) ? 0 : numero);
+    }, 0);
 
     doc.autoTable({
-      startY: 110,
+      startY: yDados + 5,
       head: [['Item', 'Quant.', 'Descrição', 'Valor Unit.', 'Valor Total']],
       body: itens,
+      foot: [[
+        { content: 'TOTAL GERAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `R$ ${totalGeral.toFixed(4).replace('.', ',')}`, styles: { halign: 'right', fontStyle: 'bold' } }
+      ]],
       theme: 'grid',
       styles: { fontSize: 10, halign: 'left', cellPadding: 2 },
       headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold', halign: 'center' },
+      footStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold', halign: 'right' },
       columnStyles: {
         0: { halign: 'center', cellWidth: 12 },
         1: { halign: 'center', cellWidth: 20 },
@@ -337,11 +400,27 @@
       margin: { left: 21 }
     });
 
-    const nomeArquivo = `orcamento_${clienteNome.replace(/\s+/g, '_').toLowerCase()}.pdf`;
+    // --- Adicionar observações após a tabela ---
+    const observacoes = document.getElementById('observacoes')?.value?.trim();
+    if (observacoes) {
+      const finalY = doc.lastAutoTable.finalY || (yDados + 5 + (itens.length * 8) + 20);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OBSERVAÇÕES:', 20, finalY + 10);
+      
+      doc.setFont('helvetica', 'normal');
+      const maxWidth = 170;
+      const linhasObs = doc.splitTextToSize(observacoes.toUpperCase(), maxWidth);
+      doc.text(linhasObs, 20, finalY + 20);
+    }
+
+    // impressão/preview
+    const clienteNomeSan = clienteNome.replace(/\s+/g, '_').toLowerCase();
     doc.autoPrint();
     const pdfBlob = doc.output('bloburl');
     window.open(pdfBlob);
   });
+
 
 
 

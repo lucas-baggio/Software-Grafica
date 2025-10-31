@@ -3,17 +3,17 @@
 
   const formOS = document.getElementById('formOS');
   const clienteSelect = document.getElementById('clienteSelect');
-  formOS.prova.addEventListener('change', () => {
-    if (formOS.prova.value === "Sim" && formOS.alteracao.value.toLowerCase() === "sim") {
-      formOS.alteracao.value = "nao";
-    }
-  });
+  // formOS.prova.addEventListener('change', () => {
+  //   if (formOS.prova.value === "Sim" && formOS.alteracao.value.toLowerCase() === "sim") {
+  //     formOS.alteracao.value = "nao";
+  //   }
+  // });
 
-  formOS.alteracao.addEventListener('change', () => {
-    if (formOS.alteracao.value.toLowerCase() === "sim" && formOS.prova.value === "Sim") {
-      formOS.prova.value = "Não";
-    }
-  });
+  // formOS.alteracao.addEventListener('change', () => {
+  //   if (formOS.alteracao.value.toLowerCase() === "sim" && formOS.prova.value === "Sim") {
+  //     formOS.prova.value = "Não";
+  //   }
+  // });
 
 
   const itensContainer = document.getElementById('itensContainer');

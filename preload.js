@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   buscarClientes: (params) => ipcRenderer.invoke('buscar-clientes', params),
   buscarClientePorId: (id) => ipcRenderer.invoke('buscar-cliente-id', id),
   atualizarCliente: (cliente) => ipcRenderer.invoke('atualizar-cliente', cliente),
+  todasOs: () => ipcRenderer.invoke('todas-os'),
 
   // Ordens de Serviço
   salvarOS: (dados) => ipcRenderer.invoke('salvar-os', dados),
@@ -46,6 +47,7 @@ contextBridge.exposeInMainWorld('api', {
   atualizarContaReceber: (dados) => ipcRenderer.invoke('atualizar-conta-receber', dados),
   excluirContaReceber: (id) => ipcRenderer.invoke('excluir-conta-receber', id),
   receberConta: (id) => ipcRenderer.invoke('receber-conta', id),
+  buscarTodasContasReceber: () => ipcRenderer.invoke('listar-todas-contas-receber'),
 
   salvarContaPagar: (dados) => ipcRenderer.invoke('salvar-conta-pagar', dados),
   listarContasPagar: (filtros) => ipcRenderer.invoke('listar-contas-pagar', filtros),
@@ -53,6 +55,7 @@ contextBridge.exposeInMainWorld('api', {
   buscarContaPagarPorId: (id) => ipcRenderer.invoke('buscar-conta-pagar-id', id),
   atualizarContaPagar: (dados) => ipcRenderer.invoke('atualizar-conta-pagar', dados),
   excluirContaPagar: (id) => ipcRenderer.invoke('excluir-conta-pagar', id),
+  buscarTodasContasPagar: () => ipcRenderer.invoke('listar-todas-contas-pagar'),
 
   // Utilitários
   readFileBase64: (filePath) => fs.readFileSync(filePath, { encoding: 'base64' }),

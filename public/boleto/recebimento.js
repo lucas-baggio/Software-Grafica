@@ -6,10 +6,36 @@
     if (!tabela || !paginacao) return;
 
     let boletos = [];
+    let boletospdf = [];
     let paginaAtual = 1;
     const porPagina = 20;
     let totalPaginas = 1;
     let filtrosAtuais = {};
+
+    // Função para debug
+    function logBoletosPdf() {
+        console.log('Estado atual de boletospdf:', {
+            length: boletospdf?.length || 0,
+            sample: boletospdf?.slice(0, 3) || [],
+            hasData: Array.isArray(boletospdf) && boletospdf.length > 0
+        });
+    }
+
+    // Função para testar a API
+    async function testarAPI() {
+        console.log('=== TESTE DA API ===');
+        try {
+            const { ok, dados, total } = await window.api.buscarTodasContasReceber();
+            console.log('Resultado da API:', { ok, total, dados: dados?.length || 0 });
+            if (dados && dados.length > 0) {
+                console.log('Primeiro registro:', dados[0]);
+                console.log('Estrutura dos dados:', Object.keys(dados[0]));
+            }
+        } catch (error) {
+            console.error('Erro ao testar API:', error);
+        }
+        console.log('=== FIM DO TESTE ===');
+    }
 
     function formatarData(dataISO) {
         if (!dataISO) return '-';
@@ -71,39 +97,32 @@
         const filtros = {
             pagina: paginaAtual || 1,
             limite: porPagina || 10,
-            cliente: filtrosAtuais.cliente,
-            data: filtrosAtuais.data,
-            status: filtrosAtuais.status
+            cliente: filtrosAtuais.cliente || null,
+            data: filtrosAtuais.data || null,
+            status: filtrosAtuais.status || null
         };
 
         const { ok, dados = [], total = 0 } = await window.api.buscarContasReceber(filtros);
-
         if (!ok) {
             alert('Erro ao carregar boletos');
             return;
         }
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
+        // Buscar todos os boletos para o PDF (sem paginação)
+        const { ok: okPdf, dados: dadosPdf = [] } = await window.api.buscarTodasContasReceber();
 
-        boletos = dados.map(boleto => {
-            const vencimento = new Date(boleto.vencimento);
-            vencimento.setHours(0, 0, 0, 0);
+        // Agora o status já vem atualizado do banco de dados
+        boletos = dados;
+        boletospdf = dadosPdf;
+        
+        console.log('Boletos carregados para tabela:', boletos.length);
+        console.log('Boletos carregados para PDF:', boletospdf.length);
 
-            if (boleto.status === 'Pendente' && vencimento < hoje) {
-                return { ...boleto, status: 'Atrasado' };
-            }
-
-            return boleto;
-        });
-
-        totalPaginas = Math.ceil(total / filtros.limite) || 1;
+        totalPaginas = Math.ceil(total / (filtros.limite || 1)) || 1;
 
         renderizarTabela();
         renderizarPaginacao();
     }
-
-
 
     window.visualizarBoleto = (id) => {
         const boleto = boletos.find(b => b.id === id);
@@ -445,39 +464,140 @@
         }
     };
 
-    document.querySelector('.export-boletos').addEventListener('click', async () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    document.querySelector('.export-boletos')?.addEventListener('click', async () => {
+        // ==== Helpers ====
+        const parseBR = (s) => {
+            if (!s) return null;
+            if (typeof s === 'object' && s instanceof Date) return isNaN(s) ? null : s;
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+                const [dd, mm, yyyy] = s.split('/').map(Number);
+                return new Date(yyyy, mm - 1, dd); // sem timezone bug
+            }
+            const d = new Date(s); // ISO ou timestamp
+            return isNaN(d) ? null : d;
+        };
 
-        const hoje = new Date();
-        const dia = String(hoje.getDate()).padStart(2, '0');
-        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-        const ano = hoje.getFullYear();
-        const dataAtual = `${dia}/${mes}/${ano}`;
 
-        const boletosMes = boletos.filter(b => {
-            const data = new Date(b.created_at || b.vencimento);
-            if (isNaN(data)) return false;
-            return data.getFullYear() === ano && (data.getMonth() + 1) === parseInt(mes);
+
+        const brToNumber = (v) => {
+            if (typeof v === 'number') return v;
+            if (!v) return 0;
+            
+            // Se já é um número válido, retorna
+            const num = parseFloat(v);
+            if (!isNaN(num)) return num;
+            
+            // Se é string, converte do formato brasileiro (vírgula como decimal)
+            const n = parseFloat(String(v).replace(',', '.'));
+            return isNaN(n) ? 0 : n;
+        };
+
+        const formatarData = (d) => {
+            const dt = parseBR(d);
+            if (!dt) return '';
+            return dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        };
+
+        const formatarMoeda = (v) => {
+            const numero = brToNumber(v);
+            return `R$ ${numero.toFixed(4).replace('.', ',')}`;
+        };
+
+        // ==== Modal de seleção ====
+        const { value: dataSelecionada, isConfirmed } = await Swal.fire({
+            title: 'Selecione o mês do relatório',
+            html: `
+      <label for="mes">Mês:</label>
+      <select id="mes" class="swal2-input">
+        ${[...Array(12)].map((_, i) => {
+                const mm = String(i + 1).padStart(2, '0');
+                return `<option value="${mm}">${mm}</option>`;
+            }).join('')}
+      </select>
+      <label for="ano">Ano:</label>
+      <input type="number" id="ano" class="swal2-input" value="${new Date().getFullYear()}">
+    `,
+            preConfirm: () => {
+                const mes = document.getElementById('mes')?.value;
+                const ano = document.getElementById('ano')?.value;
+                if (!mes || !ano) {
+                    Swal.showValidationMessage('Informe mês e ano');
+                    return false;
+                }
+                return { mes, ano };
+            },
+            confirmButtonText: 'Gerar PDF',
+            cancelButtonText: 'Cancelar',
+            showCancelButton: true,
         });
 
-        const body = boletosMes.map(b => [
-            b.id,
-            b.cliente_nome,
-            formatarData(b.vencimento),
-            b.status,
-            formatarMoeda(b.valor)
+        if (!isConfirmed || !dataSelecionada) return;
+        const { mes, ano } = dataSelecionada;
+
+        // ==== Verifica se boletospdf tem dados ====
+        logBoletosPdf(); // Debug
+        
+        if (!boletospdf || boletospdf.length === 0) {
+            // Se não tiver dados, busca novamente
+            const { ok, dados = [] } = await window.api.buscarTodasContasReceber();
+            if (!ok || dados.length === 0) {
+                alert('Nenhum boleto encontrado para gerar o relatório.');
+                return;
+            }
+            boletospdf = dados;
+            console.log('Dados carregados para PDF:', dados.length);
+        }
+
+        // Agora o status já vem atualizado do banco de dados
+        const data = boletospdf;
+
+        // ==== Filtra pelo mês/ano escolhidos usando "vencimento" ====
+        const alvoMes = parseInt(mes, 10);
+        const alvoAno = parseInt(ano, 10);
+
+        const boletosMes = data.filter((b) => {
+            const d = parseBR(b?.vencimento);
+            if (!d) return false;
+            return d.getFullYear() === alvoAno && (d.getMonth() + 1) === alvoMes;
+        });
+
+        console.log(`Filtrados ${boletosMes.length} boletos para ${mes}/${ano} de ${data.length} total`);
+
+        if (boletosMes.length === 0) {
+            alert(`Nenhum boleto encontrado para o mês ${mes}/${ano}.`);
+            return;
+        }
+
+        // ==== Monta tabela do PDF ====
+        const body = boletosMes.map((b) => [
+            b?.id ?? '',
+            b?.cliente_nome ?? '',
+            formatarData(b?.vencimento),
+            b?.status ?? '',
+            formatarMoeda(b?.valor)
         ]);
 
-        const totalMes = boletosMes.reduce((acc, b) => {
-            const valor = parseFloat(b.valor);
-            return acc + (isNaN(valor) ? 0 : valor);
-        }, 0);
+        const totalMes = boletosMes.reduce((acc, b) => acc + brToNumber(b?.valor), 0);
+
+        // ==== Gera PDF ====
+        const { jsPDF } = window.jspdf || {};
+        if (!jsPDF) {
+            alert('jsPDF não foi carregado na página.');
+            return;
+        }
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        if (typeof doc.autoTable !== 'function') {
+            alert('jsPDF-AutoTable não foi carregado. Inclua o plugin antes de gerar a tabela.');
+            return;
+        }
+
+        const dataRef = `01/${mes}/${ano}`;
 
         doc.setFontSize(16);
         doc.text('Relatório Mensal de Boletos', 105, 15, { align: 'center' });
         doc.setFontSize(11);
-        doc.text(`Emitido em: ${dataAtual}`, 15, 25);
+        doc.text(`Referente a: ${dataRef}`, 15, 25);
 
         doc.autoTable({
             startY: 30,
@@ -497,11 +617,17 @@
             ]]
         });
 
-        const pdfBlob = doc.output('bloburl');
-        window.open(pdfBlob);
+        // ==== Abrir/salvar ====
+        try {
+            const blobUrl = doc.output('bloburl');
+            window.open(blobUrl);
+        } catch {
+            doc.save(`Relatorio_Boletos_${ano}-${mes}.pdf`);
+        }
     });
 
 
+    // Exportar Boletos - DIÁRIO
     document.querySelector('.export-boletos-dia').addEventListener('click', async () => {
         const { value: dataSelecionada } = await Swal.fire({
             title: 'Selecione a data do relatório',
@@ -520,13 +646,13 @@
 
         const [ano, mes, dia] = dataSelecionada.split('-');
         const dataComparacao = `${ano}-${mes}-${dia}`;
-        const dataAtual = `${dia}/${mes}/${ano}`;
+        const dataRef = `${dia}/${mes}/${ano}`;
 
         const boletosDia = boletos.filter(b => {
             const data = new Date(b.created_at || b.vencimento);
             if (isNaN(data)) return false;
-            const dataCriacao = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
-            return dataCriacao === dataComparacao;
+            const dataFormatada = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+            return dataFormatada === dataComparacao;
         });
 
         const body = boletosDia.map(b => [
@@ -545,7 +671,7 @@
         doc.setFontSize(16);
         doc.text('Relatório Diário de Boletos', 105, 15, { align: 'center' });
         doc.setFontSize(11);
-        doc.text(`Emitido em: ${dataAtual}`, 15, 25);
+        doc.text(`Emitido em: ${dataRef}`, 15, 25);
 
         doc.autoTable({
             startY: 30,
@@ -568,6 +694,9 @@
         const pdfBlob = doc.output('bloburl');
         window.open(pdfBlob);
     });
-
-
+    
+    // Testa a API para debug
+    setTimeout(() => {
+        testarAPI();
+    }, 1000);
 })();

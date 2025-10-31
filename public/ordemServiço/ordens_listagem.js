@@ -145,65 +145,98 @@
   });
 
   document.querySelector('.export').addEventListener('click', async () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    const hoje = new Date();
-    const dia = String(hoje.getDate()).padStart(2, '0');
-    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-    const ano = hoje.getFullYear();
-
-    const dataAtual = `${dia}/${mes}/${ano}`;
-    const ordensMes = ordens.filter(os => {
-      if (!os.created_at) return false;
-
-      const data = new Date(os.created_at);
-      if (isNaN(data)) return false;
-
-      const anoOS = data.getFullYear();
-      const mesOS = data.getMonth() + 1;
-
-      return anoOS === ano && mesOS === parseInt(mes);
-    });
-
-    const body = ordensMes.map(os => [
-      os.id,
-      os.cliente,
-      formatarData(os.data_entrada),
-      formatarData(os.data_entrega),
-      formatarMoeda(os.total),
-      os.status
-    ]);
-
-    const totalMes = ordensMes.reduce((acc, os) => {
-      const valor = parseFloat(os.total);
-      return acc + (isNaN(valor) ? 0 : valor);
-    }, 0);
-
-
-    doc.setFontSize(16);
-    doc.text('Gráfica - Relatório Mensal de Ordens de Serviço', 105, 15, { align: 'center' });
-    doc.setFontSize(11);
-    doc.text(`Emitido em: ${dataAtual}`, 15, 25);
-
-    doc.autoTable({
-      startY: 30,
-      head: [['ID', 'Cliente', 'Entrada', 'Entrega', 'Total (R$)', 'Status']],
-      body,
-      theme: 'striped',
-      headStyles: { fillColor: [0, 123, 255], textColor: 255, halign: 'center' },
-      styles: { fontSize: 10, halign: 'center' },
-      margin: { left: 10, right: 10 },
-      foot: [[
-        { content: `Total de OS: ${ordensMes.length}`, colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
-        { content: `Valor Total do Mês: ${formatarMoeda(totalMes)}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }
-      ]]
-    });
-
-    doc.autoPrint();
-    const pdfBlob = doc.output('bloburl');
-    window.open(pdfBlob);
+  const { value: dataSelecionada } = await Swal.fire({
+    title: 'Selecione o mês do relatório',
+    html: `
+      <label for="mes">Mês:</label>
+      <select id="mes" class="swal2-input">
+        ${[...Array(12)].map((_, i) => `<option value="${String(i + 1).padStart(2, '0')}">${String(i + 1).padStart(2, '0')}</option>`).join('')}
+      </select>
+      <label for="ano">Ano:</label>
+      <input type="number" id="ano" class="swal2-input" value="${new Date().getFullYear()}">
+    `,
+    preConfirm: () => {
+      const mes = document.getElementById('mes').value;
+      const ano = document.getElementById('ano').value;
+      if (!mes || !ano) {
+        Swal.showValidationMessage('Informe mês e ano');
+        return;
+      }
+      return { mes, ano };
+    },
+    confirmButtonText: 'Gerar PDF',
+    cancelButtonText: 'Cancelar',
+    showCancelButton: true,
   });
+
+  if (!dataSelecionada) return;
+
+  const { mes, ano } = dataSelecionada;
+  const dataAtual = `01/${mes}/${ano}`; // apenas como referência visual no PDF
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const resposta = await window.api.todasOs();
+
+  if (!resposta?.ok || !Array.isArray(resposta.ordens)) {
+    console.error('Erro ao buscar ordens:', resposta);
+    return;
+  }
+
+  const ordens = resposta.ordens;
+
+  const ordensMes = ordens.filter(os => {
+    if (!os.created_at) return false;
+
+    const data = new Date(os.created_at);
+    if (isNaN(data)) return false;
+
+    const anoOS = data.getFullYear();
+    const mesOS = data.getMonth() + 1;
+
+    return anoOS === parseInt(ano) && mesOS === parseInt(mes);
+  });
+
+  const body = ordensMes.map(os => [
+    os.id,
+    os.cliente,
+    formatarData(os.data_entrada),
+    formatarData(os.data_entrega),
+    formatarMoeda(os.total),
+    os.status
+  ]);
+
+  const totalMes = ordensMes.reduce((acc, os) => {
+    const raw = os.total?.toString().replace(',', '.');
+    const valor = parseFloat(raw);
+    return acc + (isNaN(valor) ? 0 : valor);
+  }, 0);
+
+  doc.setFontSize(16);
+  doc.text('Gráfica - Relatório Mensal de Ordens de Serviço', 105, 15, { align: 'center' });
+  doc.setFontSize(11);
+  doc.text(`Referente a: ${dataAtual}`, 15, 25);
+
+  doc.autoTable({
+    startY: 30,
+    head: [['ID', 'Cliente', 'Entrada', 'Entrega', 'Total (R$)', 'Status']],
+    body,
+    theme: 'striped',
+    headStyles: { fillColor: [0, 123, 255], textColor: 255, halign: 'center' },
+    styles: { fontSize: 10, halign: 'center' },
+    margin: { left: 10, right: 10 },
+    foot: [[
+      { content: `Total de OS: ${ordensMes.length}`, colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
+      { content: `Valor Total do Mês: ${formatarMoeda(totalMes)}`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }
+    ]]
+  });
+
+  doc.autoPrint();
+  const pdfBlob = doc.output('bloburl');
+  window.open(pdfBlob);
+});
+
 
   document.querySelector('.export-dia').addEventListener('click', async () => {
     const { value: dataSelecionada } = await Swal.fire({
@@ -224,6 +257,18 @@
     const [ano, mes, dia] = dataSelecionada.split('-');
     const dataComparacao = `${ano}-${mes}-${dia}`;
     const dataAtual = `${dia}/${mes}/${ano}`;
+
+    const resposta = await window.api.todasOs();
+
+    if (!resposta?.ok || !Array.isArray(resposta.ordens)) {
+      console.error('Erro ao buscar ordens:', resposta);
+      return;
+    }
+
+    console.log(resposta);
+    
+
+    const ordens = resposta.ordens;
 
     const ordensDia = ordens.filter(os => {
       if (!os.created_at) return false;

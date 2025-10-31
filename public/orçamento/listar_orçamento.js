@@ -23,20 +23,45 @@
 
     return `${dia}/${mes}/${ano}`;
   }
-
-
   function formatarMoeda(valor) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4
-  }).format(valor);
-}
+    if (!valor) return 'R$ 0,0000';
 
+    let numero = typeof valor === 'number' ? valor : parseFloat(String(valor).replace(/[^\d.]/g, ''));
+
+    if (isNaN(numero)) return 'R$ 0,0000';
+
+    // Força 4 casas decimais fixas
+    const partes = numero.toFixed(4).split('.'); // ["2280002", "5000"]
+    const parteInteira = partes[0];
+    const parteDecimal = partes[1];
+
+    // Formata a parte inteira com separador de milhar
+    const parteInteiraFormatada = parteInteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    return `R$ ${parteInteiraFormatada},${parteDecimal}`;
+  }
+
+
+  function limparValor(valorFormatado) {
+    if (!valorFormatado) return 0;
+
+    const limpo = valorFormatado.replace(/[^\d.]/g, '');
+
+    const partes = limpo.split('.');
+    if (partes.length > 2) {
+      const decimal = partes.pop();
+      const inteiro = partes.join('');
+      return parseFloat(`${inteiro}.${decimal}`);
+    }
+
+    return parseFloat(limpo);
+  }
 
   function renderizarTabela() {
     tabela.innerHTML = '';
+
+    console.log(orcamentos);
+
 
     orcamentos.forEach(orc => {
       const tr = document.createElement('tr');
@@ -86,7 +111,13 @@
 
     for (const orc of dados) {
       const resposta = await window.api.buscarOrcamentoCompleto(orc.id);
-      orc.total = resposta?.itens?.reduce((acc, item) => acc + item.valor_total, 0) || 0;
+
+      const totalCalculado = resposta?.itens?.reduce((acc, item) => {
+        const valor = parseFloat(item.valor_total);
+        return acc + (isNaN(valor) ? 0 : valor);
+      }, 0) || 0;
+
+      orc.total = totalCalculado;
     }
 
     orcamentos = dados;

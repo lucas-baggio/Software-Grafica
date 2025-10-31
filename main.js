@@ -164,9 +164,6 @@ ipcMain.handle('buscar-clientes', async (_, params) => {
   }
 });
 
-
-
-
 ipcMain.handle('buscar-cliente-id', async (_, id) => {
   const db = getPool();
   const [[row]] = await db.execute(`SELECT * FROM clientes WHERE id = ?`, [id]);
@@ -191,6 +188,7 @@ ipcMain.handle('atualizar-cliente', async (_, cliente) => {
     cliente.telefone,
     cliente.inscricao_estadual,
     cliente.cnpj,
+    cliente.cpf,
     cliente.id
   ]);
   return { ok: true };
@@ -429,6 +427,37 @@ ipcMain.handle('excluir-os', async (_, id) => {
   return { ok: true };
 });
 
+ipcMain.handle('todas-os', async () => {
+  const db = getPool();
+
+  const query = `
+    SELECT 
+      os.id,
+      os.data_entrada,
+      os.data_entrega,
+      os.status,
+      os.created_at,
+      c.nome_fantasia AS cliente,
+      COALESCE(SUM(io.valor_total), 0) AS total
+    FROM ordens_servico os
+    JOIN clientes c ON c.id = os.cliente_id
+    LEFT JOIN itens_ordem io ON io.ordem_servico_id = os.id
+    GROUP BY 
+      os.id, os.data_entrada, os.data_entrega,
+      os.status, os.created_at, c.nome_fantasia
+    ORDER BY os.id DESC
+  `;
+
+  try {
+    const [ordens] = await db.execute(query);
+    return { ok: true, ordens };
+  } catch (error) {
+    console.error('❌ Erro ao buscar todas as OS:', error);
+    return { ok: false, ordens: [] };
+  }
+});
+
+
 
 ipcMain.handle('salvar-caixa', async (_, lancamento) => {
   const db = getPool();
@@ -555,12 +584,13 @@ ipcMain.handle('salvar-orcamento', async (_, { orcamento, itens }) => {
   const db = getPool();
 
   const insertOrcamento = `
-    INSERT INTO orcamentos (cliente_nome, cliente_cnpj, observacoes)
-    VALUES (?, ?, ?)
+    INSERT INTO orcamentos (cliente_nome, cliente_id, cliente_cnpj, observacoes)
+    VALUES (?, ?, ?, ?)
   `;
 
   const [result] = await db.execute(insertOrcamento, [
     orcamento.cliente_nome,
+    orcamento.cliente_id,
     orcamento.cliente_cnpj,
     orcamento.observacoes
   ]);
@@ -609,12 +639,20 @@ ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20, cliente
 
   try {
     const query = `
-      SELECT o.id, o.data, o.cliente_nome, o.cliente_cnpj
-      FROM orcamentos o
-      ${whereSQL}
-      ORDER BY o.data DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
+  SELECT 
+    o.id, 
+    o.data, 
+    o.cliente_nome, 
+    o.cliente_id,
+    o.cliente_cnpj,
+    IFNULL(SUM(io.quantidade * io.valor_unitario), 0) as total
+  FROM orcamentos o
+  LEFT JOIN itens_orcamento io ON io.orcamento_id = o.id
+  ${whereSQL}
+  GROUP BY o.id
+  ORDER BY o.data DESC
+  LIMIT ${limit} OFFSET ${offset}
+`;
 
     const countQuery = `
       SELECT COUNT(*) as total
@@ -623,9 +661,10 @@ ipcMain.handle('buscar-orcamentos', async (_, { pagina = 1, limite = 20, cliente
     `;
 
     const [orcamentos] = await db.execute(query, params);
-    const [[{ total }]] = await db.execute(countQuery, params);
+    const [[{ total: totalRegistros }]] = await db.execute(countQuery, params);
 
-    return { ok: true, orcamentos, total };
+    return { ok: true, orcamentos, total: totalRegistros };
+
   } catch (error) {
     console.error('❌ Erro ao buscar orçamentos:', error);
     return { ok: false, orcamentos: [], total: 0 };
@@ -657,8 +696,8 @@ ipcMain.handle('atualizar-orcamento', async (_, { id, orcamento, itens }) => {
   const db = getPool();
 
   await db.execute(
-    `UPDATE orcamentos SET cliente_nome = ?, cliente_cnpj = ?, observacoes = ? WHERE id = ?`,
-    [orcamento.cliente_nome, orcamento.cliente_cnpj, orcamento.observacoes, id]
+    `UPDATE orcamentos SET cliente_nome = ?, cliente_id = ?, cliente_cnpj = ?, observacoes = ? WHERE id = ?`,
+    [orcamento.cliente_nome, orcamento.cliente_id, orcamento.cliente_cnpj, orcamento.observacoes, id]
   );
 
   await db.execute(`DELETE FROM itens_orcamento WHERE orcamento_id = ?`, [id]);
@@ -742,17 +781,20 @@ ipcMain.handle('listar-contas-receber', async (_, filtros = {}) => {
     params.push(filtros.status);
   }
 
-  if (filtros.status) {
-    where.push(`cr.status = ?`);
-    params.push(filtros.status);
-  }
-
   if (filtros.data) {
     where.push(`DATE(cr.vencimento) = ?`);
     params.push(filtros.data);
   }
 
   const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  // Primeiro, atualiza status de contas pendentes que passaram do vencimento
+  const hoje = new Date().toISOString().split('T')[0];
+  await db.execute(`
+    UPDATE contas_receber 
+    SET status = 'Atrasado' 
+    WHERE status = 'Pendente' AND vencimento < ?
+  `, [hoje]);
 
   const query = `
     SELECT 
@@ -765,7 +807,14 @@ ipcMain.handle('listar-contas-receber', async (_, filtros = {}) => {
       cr.observacoes
     FROM contas_receber cr
     ${whereSQL}
-    ORDER BY cr.vencimento ASC
+    ORDER BY 
+      CASE 
+        WHEN cr.status = 'Atrasado' THEN 1
+        WHEN cr.status = 'Pendente' THEN 2
+        WHEN cr.status = 'Recebido' THEN 3
+        ELSE 4
+      END,
+      cr.vencimento ASC
     LIMIT ${limite} OFFSET ${offset}
   `;
 
@@ -786,7 +835,51 @@ ipcMain.handle('listar-contas-receber', async (_, filtros = {}) => {
   }
 });
 
+ipcMain.handle('listar-todas-contas-receber', async () => {
+  const db = getPool();
 
+  // Primeiro, atualiza status de contas pendentes que passaram do vencimento
+  const hoje = new Date().toISOString().split('T')[0];
+  await db.execute(`
+    UPDATE contas_receber 
+    SET status = 'Atrasado' 
+    WHERE status = 'Pendente' AND vencimento < ?
+  `, [hoje]);
+
+  const query = `
+    SELECT
+      cr.id,
+      cr.cliente_nome,
+      cr.valor,
+      cr.vencimento,
+      cr.data_recebimento,
+      cr.status,
+      cr.observacoes
+    FROM contas_receber cr
+    ORDER BY 
+      CASE 
+        WHEN cr.status = 'Atrasado' THEN 1
+        WHEN cr.status = 'Pendente' THEN 2
+        WHEN cr.status = 'Recebido' THEN 3
+        ELSE 4
+      END,
+      cr.vencimento ASC, cr.id ASC
+  `;
+
+  const countQuery = `
+    SELECT COUNT(*) AS total
+    FROM contas_receber
+  `;
+
+  try {
+    const [dados] = await db.execute(query);
+    const [[{ total }]] = await db.execute(countQuery);
+    return { ok: true, dados, total };
+  } catch (err) {
+    console.error('❌ Erro ao listar todas as contas a receber:', err);
+    return { ok: false, dados: [], total: 0 };
+  }
+});
 
 ipcMain.handle('receber-conta', async (_, id) => {
   const db = getPool();
@@ -910,6 +1003,14 @@ ipcMain.handle('listar-contas-pagar', async (_, filtros = {}) => {
 
   const whereSQL = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
+  // Primeiro, atualiza status de contas pendentes que passaram do vencimento
+  const hoje = new Date().toISOString().split('T')[0];
+  await db.execute(`
+    UPDATE contas_pagar 
+    SET status = 'Atrasado' 
+    WHERE status = 'Pendente' AND vencimento < ?
+  `, [hoje]);
+
   const query = `
     SELECT 
       cp.id,
@@ -921,7 +1022,14 @@ ipcMain.handle('listar-contas-pagar', async (_, filtros = {}) => {
       cp.observacoes
     FROM contas_pagar cp
     ${whereSQL}
-    ORDER BY cp.vencimento ASC
+    ORDER BY 
+      CASE 
+        WHEN cp.status = 'Atrasado' THEN 1
+        WHEN cp.status = 'Pendente' THEN 2
+        WHEN cp.status = 'Pago' THEN 3
+        ELSE 4
+      END,
+      cp.vencimento ASC
     LIMIT ${limite} OFFSET ${offset}
   `;
 
@@ -998,6 +1106,52 @@ ipcMain.handle('excluir-conta-pagar', async (_, id) => {
   const db = getPool();
   await db.execute('DELETE FROM contas_pagar WHERE id = ?', [id]);
   return { ok: true };
+});
+
+ipcMain.handle('listar-todas-contas-pagar', async () => {
+  const db = getPool();
+
+  // Primeiro, atualiza status de contas pendentes que passaram do vencimento
+  const hoje = new Date().toISOString().split('T')[0];
+  await db.execute(`
+    UPDATE contas_pagar 
+    SET status = 'Atrasado' 
+    WHERE status = 'Pendente' AND vencimento < ?
+  `, [hoje]);
+
+  const query = `
+    SELECT
+      cp.id,
+      cp.fornecedor_nome,
+      cp.valor,
+      cp.vencimento,
+      cp.data_pagamento,
+      cp.status,
+      cp.observacoes
+    FROM contas_pagar cp
+    ORDER BY 
+      CASE 
+        WHEN cp.status = 'Atrasado' THEN 1
+        WHEN cp.status = 'Pendente' THEN 2
+        WHEN cp.status = 'Pago' THEN 3
+        ELSE 4
+      END,
+      cp.vencimento ASC, cp.id ASC
+  `;
+
+  const countQuery = `
+    SELECT COUNT(*) AS total
+    FROM contas_pagar
+  `;
+
+  try {
+    const [dados] = await db.execute(query);
+    const [[{ total }]] = await db.execute(countQuery);
+    return { ok: true, dados, total };
+  } catch (err) {
+    console.error('❌ Erro ao listar todas as contas a pagar:', err);
+    return { ok: false, dados: [], total: 0 };
+  }
 });
 
 
